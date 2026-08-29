@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase'
 import Link from 'next/link'
 import {
   Search, Filter, TrendingUp, IndianRupee, BarChart3,
-  ChevronDown, X, Flame, Star, Briefcase,
+  ChevronDown, X, Flame, Star, Briefcase, Check, GitCompare,
 } from 'lucide-react'
 
 interface Career {
@@ -70,6 +70,7 @@ export default function CareersPage() {
   const [sortBy, setSortBy] = useState('demand')
   const [trendingOnly, setTrendingOnly] = useState(false)
   const [showFilters, setShowFilters] = useState(false)
+  const [selectedForCompare, setSelectedForCompare] = useState<Set<string>>(new Set())
 
   const supabase = useMemo(() => createClient(), [])
 
@@ -295,11 +296,21 @@ export default function CareersPage() {
               <span className="ml-1">in <span className="font-medium text-indigo-600">{selectedCategory}</span></span>
             )}
           </p>
-          {trendingOnly && (
-            <span className="flex items-center gap-1 text-xs text-orange-600 font-medium bg-orange-50 px-2 py-1 rounded-full">
-              <Flame className="w-3 h-3" /> Trending careers only
-            </span>
-          )}
+          <div className="flex items-center gap-3">
+            {trendingOnly && (
+              <span className="flex items-center gap-1 text-xs text-orange-600 font-medium bg-orange-50 px-2 py-1 rounded-full">
+                <Flame className="w-3 h-3" /> Trending careers only
+              </span>
+            )}
+            {selectedForCompare.size > 0 && (
+              <Link
+                href={`/compare/careers?ids=${Array.from(selectedForCompare).join(',')}`}
+                className="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+              >
+                <GitCompare className="w-4 h-4" /> Compare ({selectedForCompare.size})
+              </Link>
+            )}
+          </div>
         </div>
 
         {/* Career Grid */}
@@ -332,11 +343,34 @@ export default function CareersPage() {
                         </span>
                       )}
                     </div>
-                    {career.demand_score && (
-                      <span className="text-xs font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full">
-                        {career.demand_score}/10
-                      </span>
-                    )}
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={(e) => {
+                          e.preventDefault()
+                          e.stopPropagation()
+                          const newSet = new Set(selectedForCompare)
+                          if (newSet.has(career.id)) {
+                            newSet.delete(career.id)
+                          } else if (newSet.size < 3) {
+                            newSet.add(career.id)
+                          }
+                          setSelectedForCompare(newSet)
+                        }}
+                        className={`p-1.5 rounded-lg transition-colors ${
+                          selectedForCompare.has(career.id)
+                            ? 'bg-indigo-100 text-indigo-600'
+                            : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
+                        }`}
+                        title={selectedForCompare.has(career.id) ? 'Remove from comparison' : 'Add to comparison'}
+                      >
+                        {selectedForCompare.has(career.id) ? <Check className="w-4 h-4" /> : <GitCompare className="w-4 h-4" />}
+                      </button>
+                      {career.demand_score && (
+                        <span className="text-xs font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full">
+                          {career.demand_score}/10
+                        </span>
+                      )}
+                    </div>
                   </div>
 
                   {/* Title */}

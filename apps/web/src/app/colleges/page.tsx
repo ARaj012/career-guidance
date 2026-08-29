@@ -6,6 +6,7 @@ import Link from 'next/link'
 import {
   MapPin, GraduationCap, Star, ExternalLink, Filter,
   Search, Building2, ChevronDown, X, Users, Award, IndianRupee,
+  Check, GitCompare,
 } from 'lucide-react'
 
 interface College {
@@ -21,11 +22,13 @@ interface College {
   naac_grade: string | null
   established_year: number | null
   website_url: string | null
+  logo_url: string | null
   total_students: number | null
   is_featured: boolean
   annual_fees_min: number | null
   annual_fees_max: number | null
   fee_note: string | null
+  why_join: string | null
 }
 
 const TYPE_COLORS: Record<string, string> = {
@@ -84,6 +87,7 @@ export default function CollegesPage() {
   const [sortBy, setSortBy] = useState('nirf')
   const [showFilters, setShowFilters] = useState(false)
   const [featuredOnly, setFeaturedOnly] = useState(false)
+  const [selectedForCompare, setSelectedForCompare] = useState<Set<string>>(new Set())
 
   const supabase = createClient()
 
@@ -316,6 +320,14 @@ export default function CollegesPage() {
           <p className="text-sm text-gray-500">
             Showing <span className="font-semibold text-gray-800">{filtered.length}</span> of {colleges.length} colleges
           </p>
+          {selectedForCompare.size > 0 && (
+            <Link
+              href={`/compare/colleges?ids=${Array.from(selectedForCompare).join(',')}`}
+              className="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+            >
+              <GitCompare className="w-4 h-4" /> Compare ({selectedForCompare.size})
+            </Link>
+          )}
         </div>
 
         {filtered.length === 0 ? (
@@ -327,12 +339,23 @@ export default function CollegesPage() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
             {filtered.map(college => (
-              <Link key={college.id} href={`/colleges/${college.slug}`}>
-                <div className="bg-white rounded-xl border border-gray-200 hover:border-indigo-300 hover:shadow-md transition-all duration-200 overflow-hidden group h-full flex flex-col">
-                  <div className={`h-1 ${college.nirf_rank && college.nirf_rank <= 10 ? 'bg-gradient-to-r from-yellow-400 to-orange-400' : college.nirf_rank && college.nirf_rank <= 50 ? 'bg-gradient-to-r from-indigo-500 to-purple-500' : 'bg-gradient-to-r from-gray-200 to-gray-300'}`} />
+              <div key={college.id} className="bg-white rounded-xl border border-gray-200 hover:border-indigo-300 hover:shadow-md transition-all duration-200 overflow-hidden group h-full flex flex-col">
+                <div className={`h-1 ${college.nirf_rank && college.nirf_rank <= 10 ? 'bg-gradient-to-r from-yellow-400 to-orange-400' : college.nirf_rank && college.nirf_rank <= 50 ? 'bg-gradient-to-r from-indigo-500 to-purple-500' : 'bg-gradient-to-r from-gray-200 to-gray-300'}`} />
 
-                  <div className="p-5 flex flex-col flex-1">
-                    <div className="flex items-start justify-between gap-3 mb-3">
+                <div className="p-5 flex flex-col flex-1">
+                  <div className="flex items-start justify-between gap-3 mb-3">
+                    <div className="flex items-start gap-3 flex-1 min-w-0">
+                      {college.logo_url && (
+                        <div className="flex-shrink-0 w-10 h-10 rounded-lg border border-gray-100 bg-white flex items-center justify-center overflow-hidden">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={college.logo_url}
+                            alt=""
+                            className="w-7 h-7 object-contain"
+                            loading="lazy"
+                          />
+                        </div>
+                      )}
                       <div className="flex-1 min-w-0">
                         <div className="flex flex-wrap items-center gap-1.5 mb-2">
                           <span className={`text-xs font-medium px-2 py-0.5 rounded-full border ${TYPE_COLORS[college.type] || 'bg-gray-100 text-gray-600 border-gray-200'}`}>
@@ -345,10 +368,31 @@ export default function CollegesPage() {
                           )}
                           {college.is_featured && <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />}
                         </div>
-                        <h3 className="font-semibold text-gray-900 text-sm leading-snug group-hover:text-indigo-700 transition-colors line-clamp-2">
+                        <Link href={`/colleges/${college.slug}`} className="font-semibold text-gray-900 text-sm leading-snug group-hover:text-indigo-700 transition-colors line-clamp-2">
                           {college.name}
-                        </h3>
+                        </Link>
                       </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => {
+                          const newSet = new Set(selectedForCompare)
+                          if (newSet.has(college.id)) {
+                            newSet.delete(college.id)
+                          } else if (newSet.size < 3) {
+                            newSet.add(college.id)
+                          }
+                          setSelectedForCompare(newSet)
+                        }}
+                        className={`p-1.5 rounded-lg transition-colors ${
+                          selectedForCompare.has(college.id)
+                            ? 'bg-indigo-100 text-indigo-600'
+                            : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
+                        }`}
+                        title={selectedForCompare.has(college.id) ? 'Remove from comparison' : 'Add to comparison'}
+                      >
+                        {selectedForCompare.has(college.id) ? <Check className="w-4 h-4" /> : <GitCompare className="w-4 h-4" />}
+                      </button>
                       {college.nirf_rank ? (
                         <div className="flex-shrink-0 text-center bg-indigo-50 border border-indigo-100 rounded-lg px-2.5 py-1.5">
                           <div className="text-base font-bold text-indigo-700 leading-none">#{college.nirf_rank}</div>
@@ -361,49 +405,55 @@ export default function CollegesPage() {
                         </div>
                       ) : null}
                     </div>
+                  </div>
 
-                    <div className="flex items-center gap-1.5 text-xs text-gray-500 mb-3">
-                      <MapPin className="w-3.5 h-3.5 flex-shrink-0 text-gray-400" />
-                      <span>{college.city ? `${college.city}, ` : ''}{college.state}</span>
-                    </div>
+                  <div className="flex items-center gap-1.5 text-xs text-gray-500 mb-3">
+                    <MapPin className="w-3.5 h-3.5 flex-shrink-0 text-gray-400" />
+                    <span>{college.city ? `${college.city}, ` : ''}{college.state}</span>
+                  </div>
 
-                    {/* Fees Badge */}
-                    <div className="flex items-center gap-1.5 mb-3">
-                      <IndianRupee className="w-3.5 h-3.5 text-green-500 flex-shrink-0" />
-                      <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${college.annual_fees_min === 0 && college.annual_fees_max === 0 ? 'bg-emerald-50 text-emerald-700' : 'bg-gray-50 text-gray-700'}`}>
-                        {formatFees(college.annual_fees_min, college.annual_fees_max)}
+                  {/* Fees Badge */}
+                  <div className="flex items-center gap-1.5 mb-3">
+                    <IndianRupee className="w-3.5 h-3.5 text-green-500 flex-shrink-0" />
+                    <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${college.annual_fees_min === 0 && college.annual_fees_max === 0 ? 'bg-emerald-50 text-emerald-700' : 'bg-gray-50 text-gray-700'}`}>
+                      {formatFees(college.annual_fees_min, college.annual_fees_max)}
+                    </span>
+                  </div>
+
+                  {college.why_join && (
+                    <p className="text-xs text-gray-500 leading-relaxed line-clamp-2 mb-1">
+                      {college.why_join}
+                    </p>
+                  )}
+
+                  <div className="flex items-center gap-3 text-xs text-gray-400 mt-auto pt-3 border-t border-gray-100">
+                    {college.established_year && (
+                      <span className="flex items-center gap-1">
+                        <GraduationCap className="w-3.5 h-3.5" />
+                        Est. {college.established_year}
                       </span>
-                    </div>
-
-                    <div className="flex items-center gap-3 text-xs text-gray-400 mt-auto pt-3 border-t border-gray-100">
-                      {college.established_year && (
-                        <span className="flex items-center gap-1">
-                          <GraduationCap className="w-3.5 h-3.5" />
-                          Est. {college.established_year}
-                        </span>
-                      )}
-                      {college.total_students && (
-                        <span className="flex items-center gap-1">
-                          <Users className="w-3.5 h-3.5" />
-                          {formatStudents(college.total_students)} students
-                        </span>
-                      )}
-                      {college.qs_rank && college.nirf_rank && (
-                        <span className="flex items-center gap-1">
-                          <Award className="w-3.5 h-3.5" />
-                          QS #{college.qs_rank}
-                        </span>
-                      )}
-                    </div>
-
-                    <div className="mt-3 flex items-center justify-end">
-                      <span className="text-xs text-indigo-600 group-hover:text-indigo-800 font-medium flex items-center gap-1">
-                        View details <ExternalLink className="w-3 h-3" />
+                    )}
+                    {college.total_students && (
+                      <span className="flex items-center gap-1">
+                        <Users className="w-3.5 h-3.5" />
+                        {formatStudents(college.total_students)} students
                       </span>
-                    </div>
+                    )}
+                    {college.qs_rank && college.nirf_rank && (
+                      <span className="flex items-center gap-1">
+                        <Award className="w-3.5 h-3.5" />
+                        QS #{college.qs_rank}
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="mt-3 flex items-center justify-end">
+                    <Link href={`/colleges/${college.slug}`} className="text-xs text-indigo-600 group-hover:text-indigo-800 font-medium flex items-center gap-1">
+                      View details <ExternalLink className="w-3 h-3" />
+                    </Link>
                   </div>
                 </div>
-              </Link>
+              </div>
             ))}
           </div>
         )}

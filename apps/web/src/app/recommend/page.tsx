@@ -88,10 +88,35 @@ export default function RecommendPage() {
       const data = await response.json()
       setResults(data.recommendations || [])
       setStep(3)
+      
+      // Auto-save the recommendation session
+      await saveRecommendationSession(data.recommendations || [])
     } catch (error) {
       console.error('Error:', error)
     }
     setLoading(false)
+  }
+
+  const saveRecommendationSession = async (recommendations: CareerResult[]) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+
+      const { error } = await supabase
+        .from('user_recommendation_history')
+        .insert({
+          user_id: user.id,
+          stream: selectedStream,
+          subjects: subjectInputs,
+          recommendations: recommendations
+        })
+
+      if (error) {
+        console.error('Error saving recommendation session:', error)
+      }
+    } catch (error) {
+      console.error('Error in saveRecommendationSession:', error)
+    }
   }
 
   return (

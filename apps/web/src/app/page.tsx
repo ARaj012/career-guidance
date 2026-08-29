@@ -10,6 +10,8 @@ export default function Home() {
           <a href="/careers" className="text-gray-600 hover:text-indigo-600">Careers</a>
           <a href="/exams" className="text-gray-600 hover:text-indigo-600">Exams</a>
           <a href="/colleges" className="text-gray-600 hover:text-indigo-600">Colleges</a>
+          <a href="/scholarships" className="text-gray-600 hover:text-indigo-600">Scholarships</a>
+          <a href="/blog" className="text-gray-600 hover:text-indigo-600">Blog</a>
           <a href="/login" className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700">
             Get Started
           </a>
@@ -64,8 +66,8 @@ export default function Home() {
             { icon: "🗺️", title: "Career Roadmaps", desc: "Step-by-step guides from where you are to your dream career" },
             { icon: "🏫", title: "College Finder", desc: "Find top colleges with rankings, fees, and cutoff details" },
             { icon: "📝", title: "Exam Tracker", desc: "Never miss an exam with dates, syllabus, and eligibility" },
-            { icon: "💰", title: "Salary Insights", desc: "Real salary data for every career path in India" },
-            { icon: "📈", title: "Growth Analysis", desc: "Know which careers are trending and in high demand" },
+            { icon: "💰", title: "Scholarships", desc: "Find financial aid and scholarships for your education" },
+            { icon: "�", title: "Career Blog", desc: "Expert tips, industry news, and success stories" },
           ].map((feature) => (
             <div key={feature.title} className="bg-white rounded-2xl p-6 shadow-sm hover:shadow-md transition">
               <div className="text-4xl mb-4">{feature.icon}</div>

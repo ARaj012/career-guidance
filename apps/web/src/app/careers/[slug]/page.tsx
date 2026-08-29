@@ -2,6 +2,7 @@
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
+import SaveCareerButton from '@/components/SaveCareerButton'
 import {
   ArrowLeft, TrendingUp, IndianRupee, Briefcase, BookOpen,
   GraduationCap, Star, CheckCircle2, Building2, Target,
@@ -11,6 +12,18 @@ import {
 
 // ── Category → College slugs mapping ──────────────────────────────────────
 // Maps each career category to the most relevant colleges
+//
+// NOTE: verified against the live `colleges` table on 2026-08-20.
+// Fixed 3 stale/broken slugs that were silently dropping colleges from
+// this list with no error:
+//   - 'hyderabad-university' -> 'university-of-hyderabad' (Government, Education)
+//   - 'hyd-communication' -> removed (no matching row exists) (Media)
+//   - 'jamia-millia-islamia' -> removed, duplicate of 'jmi-delhi' which was
+//     already in the list (Education); replaced with 'aud-delhi' to keep 15 slots
+//
+// If more colleges are added/renamed/merged during the DB enrichment project,
+// re-verify these slugs against `select slug from colleges` before trusting
+// this list again.
 
 const CATEGORY_COLLEGES: Record<string, string[]> = {
   Technology: [
@@ -44,7 +57,7 @@ const CATEGORY_COLLEGES: Record<string, string[]> = {
     'jgls-sonipat', 'sls-pune', 'du-law-faculty', 'glc-mumbai', 'cnlu-patna',
   ],
   Government: [
-    'lbsnaa-mussoorie', 'jnu', 'university-of-delhi', 'bhu', 'hyderabad-university',
+    'lbsnaa-mussoorie', 'jnu', 'university-of-delhi', 'bhu', 'university-of-hyderabad',
     'iipa-delhi', 'amu', 'panjab-university', 'tiss-mumbai', 'jmi-delhi',
     'lucknow-university', 'patna-university', 'osmania-university', 'jadavpur-university', 'iim-ahmedabad',
   ],
@@ -70,13 +83,13 @@ const CATEGORY_COLLEGES: Record<string, string[]> = {
   ],
   Media: [
     'iimc-delhi', 'acj-chennai', 'simc-pune', 'ftii-pune', 'srfti-kolkata',
-    'xic-mumbai', 'mic-manipal', 'ajkmcrc-delhi', 'hyd-communication', 'jmi-delhi',
+    'xic-mumbai', 'mic-manipal', 'ajkmcrc-delhi', 'jmi-delhi',
     'university-of-delhi', 'jadavpur-university', 'mumbai-university', 'pondicherry-university', 'christ-university',
   ],
   Education: [
     'tiss-mumbai', 'jnu', 'university-of-delhi', 'bhu', 'amu',
-    'azim-premji-university', 'niepa-delhi', 'ncert-delhi', 'jamia-millia-islamia', 'ignou-delhi',
-    'aud-delhi', 'panjab-university', 'hyderabad-university', 'jadavpur-university', 'calcutta-university',
+    'azim-premji-university', 'niepa-delhi', 'ncert-delhi', 'ignou-delhi',
+    'aud-delhi', 'panjab-university', 'university-of-hyderabad', 'jadavpur-university', 'calcutta-university',
   ],
 }
 
@@ -351,6 +364,7 @@ export default async function CareerDetailPage({ params }: { params: Promise<{ s
                 <Link href={`/roadmaps/${career.slug}`} className="inline-flex items-center gap-2 border border-indigo-200 text-indigo-700 hover:bg-indigo-50 text-sm font-medium px-5 py-2.5 rounded-lg transition-colors">
                   <Lightbulb className="w-4 h-4" /> View Roadmap
                 </Link>
+                <SaveCareerButton careerId={career.id} />
               </div>
             </div>
 

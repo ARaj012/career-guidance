@@ -1,17 +1,22 @@
 'use client'
 import { createClient } from '@/lib/supabase'
 import { useState } from 'react'
+import { useSearchParams } from 'next/navigation'
+import { Suspense } from 'react'
 
-export default function LoginPage() {
+function LoginForm() {
   const [loading, setLoading] = useState(false)
   const supabase = createClient()
+  const searchParams = useSearchParams()
+  const next = searchParams.get('next') || '/dashboard'
 
   const signInWithGoogle = async () => {
     setLoading(true)
+    const safeNext = next.startsWith('/') ? next : '/dashboard'
     await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${window.location.origin}/auth/callback`
+        redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(safeNext)}`
       }
     })
     setLoading(false)
@@ -84,5 +89,13 @@ export default function LoginPage() {
         </p>
       </div>
     </main>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense>
+      <LoginForm />
+    </Suspense>
   )
 }

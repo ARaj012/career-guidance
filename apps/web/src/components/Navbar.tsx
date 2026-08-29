@@ -11,6 +11,9 @@ const NAV_LINKS = [
   { href: '/careers',   label: 'Careers'    },
   { href: '/colleges',  label: 'Colleges'   },
   { href: '/exams',     label: 'Exams'      },
+  { href: '/scholarships', label: 'Scholarships' },
+  { href: '/blog',      label: 'Blog'       },
+  { href: '/pricing',   label: 'Pricing'    },
   { href: '/recommend', label: 'Get Advice' },
 ]
 
@@ -21,6 +24,7 @@ export default function Navbar() {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
   const [dropdownOpen, setDropdownOpen] = useState(false)
+  const [isAdmin, setIsAdmin] = useState(false)
 
   const supabase = createClient()
 
@@ -29,6 +33,9 @@ export default function Navbar() {
     supabase.auth.getUser().then(({ data }) => {
       setUser(data.user)
       setLoading(false)
+      if (data.user) {
+        fetch('/api/admin/me').then((r) => r.json()).then((json) => setIsAdmin(Boolean(json.admin)))
+      }
     })
 
     // Listen for auth changes
@@ -132,6 +139,22 @@ export default function Navbar() {
                       <UserIcon className="w-4 h-4" /> Dashboard
                     </Link>
                     <Link
+                      href="/subscription"
+                      onClick={() => setDropdownOpen(false)}
+                      className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                    >
+                      <GraduationCap className="w-4 h-4" /> Subscription
+                    </Link>
+                    {isAdmin && (
+                      <Link
+                        href="/admin"
+                        onClick={() => setDropdownOpen(false)}
+                        className="flex items-center gap-2 px-4 py-2 text-sm text-indigo-700 hover:bg-indigo-50 transition-colors"
+                      >
+                        <GraduationCap className="w-4 h-4" /> Admin console
+                      </Link>
+                    )}
+                    <Link
                       href="/profile"
                       onClick={() => setDropdownOpen(false)}
                       className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
@@ -218,6 +241,16 @@ export default function Navbar() {
                   className="block px-4 py-2.5 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50">
                   Dashboard
                 </Link>
+                <Link href="/subscription" onClick={() => setMenuOpen(false)}
+                  className="block px-4 py-2.5 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50">
+                  Subscription
+                </Link>
+                {isAdmin && (
+                  <Link href="/admin" onClick={() => setMenuOpen(false)}
+                    className="block px-4 py-2.5 rounded-lg text-sm font-medium text-indigo-700 hover:bg-indigo-50">
+                    Admin console
+                  </Link>
+                )}
                 <Link href="/profile" onClick={() => setMenuOpen(false)}
                   className="block px-4 py-2.5 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50">
                   Profile

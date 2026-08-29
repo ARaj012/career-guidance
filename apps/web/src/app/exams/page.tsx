@@ -1,31 +1,77 @@
+'use client'
+
 import Link from "next/link";
-import { createServerSupabaseClient } from "@/lib/supabase-server";
+import { useState, useEffect } from "react";
+import { createClient } from "@/lib/supabase";
+import { Search, Filter, Calendar, GraduationCap, Building2, Globe, Monitor, FileText, X } from "lucide-react";
 
-export default async function ExamsPage() {
-  const supabase = await createServerSupabaseClient();
+interface Exam {
+  id: string;
+  name: string;
+  slug: string;
+  description: string;
+  conducting_body: string;
+  exam_level: string;
+  mode: string;
+  frequency: string;
+  official_url: string | null;
+  exam_schedules: Array<{
+    registration_start: string | null;
+    registration_end: string | null;
+    exam_date_start: string | null;
+    result_date: string | null;
+    year: number | null;
+  }>;
+  exam_eligibility: Array<{
+    min_percentage: number | null;
+    class_required: string | null;
+    stream_required: string | null;
+    age_min: number | null;
+    age_max: number | null;
+  }>;
+}
 
-  const { data: exams } = await supabase
-    .from("exams")
-    .select(
-      `
-      *,
-      exam_schedules (
-        registration_start,
-        registration_end,
-        exam_date_start,
-        result_date,
-        year
-      ),
-      exam_eligibility (
-        min_percentage,
-        class_required,
-        stream_required,
-        age_min,
-        age_max
-      )
-    `,
-    )
-    .order("name");
+export default function ExamsPage() {
+  const [exams, setExams] = useState<Exam[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("all");
+  const [selectedLevel, setSelectedLevel] = useState("all");
+  const [selectedMode, setSelectedMode] = useState("all");
+  const [selectedBody, setSelectedBody] = useState("all");
+  const [showFilters, setShowFilters] = useState(false);
+  const supabase = createClient();
+
+  useEffect(() => {
+    async function fetchExams() {
+      const { data } = await supabase
+        .from("exams")
+        .select(
+          `
+          *,
+          exam_schedules (
+            registration_start,
+            registration_end,
+            exam_date_start,
+            result_date,
+            year
+          ),
+          exam_eligibility (
+            min_percentage,
+            class_required,
+            stream_required,
+            age_min,
+            age_max
+          )
+        `
+        )
+        .order("name");
+
+      setExams(data as Exam[] || []);
+      setLoading(false);
+    }
+    fetchExams();
+  }, [supabase]);
 
   const categories = [
     { label: "All", value: "all" },
@@ -37,6 +83,24 @@ export default async function ExamsPage() {
     { label: "Law", value: "law" },
     { label: "Defence", value: "defence" },
     { label: "Research", value: "research" },
+  ];
+
+  const levels = [
+    { label: "All Levels", value: "all" },
+    { label: "National", value: "National" },
+    { label: "State", value: "State" },
+    { label: "International", value: "International" },
+  ];
+
+  const modes = [
+    { label: "All Modes", value: "all" },
+    { label: "Online", value: "Online" },
+    { label: "Offline", value: "Offline" },
+  ];
+
+  const conductingBodies = [
+    { label: "All Bodies", value: "all" },
+    ...Array.from(new Set(exams.map(e => e.conducting_body).filter(Boolean))).slice(0, 10).map(body => ({ label: body, value: body }))
   ];
 
   const getCategoryColor = (name: string) => {
@@ -169,6 +233,42 @@ export default async function ExamsPage() {
     });
   };
 
+  const filteredExams = exams.filter(exam => {
+    const matchesSearch = searchTerm === "" || 
+      exam.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      exam.conducting_body?.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const cat = getCategoryColor(exam.name);
+    const matchesCategory = selectedCategory === "all" || cat.label.toLowerCase() === selectedCategory;
+    
+    const matchesLevel = selectedLevel === "all" || exam.exam_level === selectedLevel;
+    
+    const matchesMode = selectedMode === "all" || exam.mode === selectedMode;
+    
+    const matchesBody = selectedBody === "all" || exam.conducting_body === selectedBody;
+    
+    return matchesSearch && matchesCategory && matchesLevel && matchesMode && matchesBody;
+  });
+
+  const clearFilters = () => {
+    setSearchTerm("");
+    setSelectedCategory("all");
+    setSelectedLevel("all");
+    setSelectedMode("all");
+    setSelectedBody("all");
+  };
+
+  const hasActiveFilters = searchTerm !== "" || selectedCategory !== "all" || 
+    selectedLevel !== "all" || selectedMode !== "all" || selectedBody !== "all";
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600" />
+      </div>
+    );
+  }
+
   return (
     <main className="min-h-screen bg-gray-50">
       {/* Navbar */}
@@ -201,22 +301,22 @@ export default async function ExamsPage() {
       {/* Header */}
       <div className="bg-gradient-to-r from-indigo-600 to-blue-500 px-8 py-12 text-white">
         <h1 className="text-4xl font-extrabold mb-2">Entrance Exams</h1>
-        <p className="text-indigo-100 text-lg">{exams?.length ?? 0}+ exams with dates, eligibility and official links</p>
+        <p className="text-indigo-100 text-lg">{exams.length}+ exams with dates, eligibility and official links</p>
         {/* Stats */}
         <div className="flex gap-8 mt-6">
           {[
-            { label: "Total Exams", value: `${exams?.length ?? 0}+` },
+            { label: "Total Exams", value: `${exams.length}+` },
             {
               label: "National Level",
-              value: `${exams?.filter((e) => e.exam_level === "National").length ?? 0}+`,
+              value: `${exams.filter((e) => e.exam_level === "National").length}+`,
             },
             {
               label: "State Level",
-              value: `${exams?.filter((e) => e.exam_level === "State").length ?? 0}+`,
+              value: `${exams.filter((e) => e.exam_level === "State").length}+`,
             },
             {
               label: "International",
-              value: `${exams?.filter((e) => e.exam_level === "International").length ?? 0}+`,
+              value: `${exams.filter((e) => e.exam_level === "International").length}+`,
             },
           ].map((stat) => (
             <div key={stat.label} className="text-center">
@@ -228,9 +328,101 @@ export default async function ExamsPage() {
       </div>
 
       <div className="max-w-7xl mx-auto px-8 py-10">
+        {/* Search and Filters */}
+        <div className="bg-white rounded-2xl p-6 shadow-sm mb-8">
+          <div className="flex flex-col md:flex-row gap-4 mb-4">
+            <div className="flex-1 relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+              <input
+                type="text"
+                placeholder="Search exams by name or conducting body..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+            </div>
+            <button
+              onClick={() => setShowFilters(!showFilters)}
+              className="flex items-center gap-2 px-6 py-3 border border-gray-200 rounded-xl hover:bg-gray-50 transition"
+            >
+              <Filter className="w-5 h-5" />
+              {showFilters ? "Hide Filters" : "Show Filters"}
+            </button>
+            {hasActiveFilters && (
+              <button
+                onClick={clearFilters}
+                className="flex items-center gap-2 px-6 py-3 bg-red-50 text-red-600 rounded-xl hover:bg-red-100 transition"
+              >
+                <X className="w-5 h-5" />
+                Clear Filters
+              </button>
+            )}
+          </div>
+
+          {showFilters && (
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 pt-4 border-t border-gray-100">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Category</label>
+                <select
+                  value={selectedCategory}
+                  onChange={(e) => setSelectedCategory(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                >
+                  {categories.map(cat => (
+                    <option key={cat.value} value={cat.value}>{cat.label}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Exam Level</label>
+                <select
+                  value={selectedLevel}
+                  onChange={(e) => setSelectedLevel(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                >
+                  {levels.map(level => (
+                    <option key={level.value} value={level.value}>{level.label}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Mode</label>
+                <select
+                  value={selectedMode}
+                  onChange={(e) => setSelectedMode(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                >
+                  {modes.map(mode => (
+                    <option key={mode.value} value={mode.value}>{mode.label}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Conducting Body</label>
+                <select
+                  value={selectedBody}
+                  onChange={(e) => setSelectedBody(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                >
+                  {conductingBodies.map(body => (
+                    <option key={body.value} value={body.value}>{body.label}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Results count */}
+        <div className="flex items-center justify-between mb-6">
+          <p className="text-gray-600">
+            Showing <span className="font-semibold text-gray-900">{filteredExams.length}</span> of <span className="font-semibold text-gray-900">{exams.length}</span> exams
+          </p>
+        </div>
+
         {/* Exam Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {exams?.map((exam) => {
+          {filteredExams.map((exam) => {
             const cat = getCategoryColor(exam.name);
             const schedule = exam.exam_schedules?.[0];
             const eligibility = exam.exam_eligibility?.[0];
@@ -336,7 +528,7 @@ export default async function ExamsPage() {
                     View Details →
                   </Link>
                   <a
-                    href={exam.official_url}
+                    href={exam.official_url || "#"}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-xs bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition font-medium"
@@ -348,6 +540,20 @@ export default async function ExamsPage() {
             );
           })}
         </div>
+
+        {filteredExams.length === 0 && (
+          <div className="text-center py-12">
+            <FileText className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+            <h3 className="text-xl font-semibold text-gray-900 mb-2">No exams found</h3>
+            <p className="text-gray-500 mb-4">Try adjusting your search or filters</p>
+            <button
+              onClick={clearFilters}
+              className="text-indigo-600 font-medium hover:underline"
+            >
+              Clear all filters
+            </button>
+          </div>
+        )}
       </div>
     </main>
   );

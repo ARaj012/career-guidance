@@ -2,6 +2,7 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
+import SaveExamButton from '@/components/SaveExamButton'
 
 const STRATEGY_STEPS = [
   {
@@ -106,16 +107,12 @@ export default async function ExamDetailPage({
 
   // National/service-level cutoffs — for exams that don't gate a specific
   // college admission (NDA, UPSC CSE, CDS, NET exams, etc.)
-  const { data: nationalCutoffRows, error: nationalCutoffError } = await supabase
+  const { data: nationalCutoffRows } = await supabase
     .from('exam_national_cutoffs')
     .select('*')
     .eq('exam_id', exam.id)
     .order('year', { ascending: false })
     .limit(2000)
-
-  console.log('DEBUG exam.id:', exam.id, 'slug:', slug)
-  console.log('DEBUG nationalCutoffRows count:', nationalCutoffRows?.length ?? 0)
-  console.log('DEBUG nationalCutoffError:', nationalCutoffError)
 
   const nationalCutoffs = (nationalCutoffRows ?? []) as any[]
   const nationalByYear = new Map<number, any[]>()
@@ -180,6 +177,15 @@ export default async function ExamDetailPage({
     toppersYear = (allToppers[0] as any).year
     toppers = (allToppers as any[]).filter((t) => t.year === toppersYear)
   }
+
+  // Subject-wise syllabus & weightage now lives on its own page
+  // (/exams/[slug]/roadmap) to keep this page from getting bulky — here we
+  // only need to know whether that data exists, to decide whether to show
+  // the link card below.
+  const { count: syllabusCount } = await supabase
+    .from('exam_syllabus')
+    .select('*', { count: 'exact', head: true })
+    .eq('exam_id', exam.id)
 
   const hasSelectionStats = latestSchedule?.total_applicants && latestSchedule?.total_selected
   const selectionRate = hasSelectionStats
@@ -299,15 +305,21 @@ export default async function ExamDetailPage({
         )}
 
         {exam.official_url && (
-          <a
-            href={exam.official_url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-block mb-8 bg-indigo-600 text-white font-medium px-6 py-2.5 rounded-lg hover:bg-indigo-700 transition"
-          >
-            Go to Official Site →
-          </a>
+          <div className="flex flex-wrap gap-3 mb-8">
+            <a
+              href={exam.official_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-block bg-indigo-600 text-white font-medium px-6 py-2.5 rounded-lg hover:bg-indigo-700 transition"
+            >
+              Go to Official Site →
+            </a>
+          </div>
         )}
+
+        <div className="flex flex-wrap gap-3 mb-8">
+          <SaveExamButton examId={exam.id} />
+        </div>
 
         {/* How to crack this exam — generic evergreen strategy */}
         <div className="mb-10">
@@ -331,6 +343,25 @@ export default async function ExamDetailPage({
             })}
           </div>
         </div>
+
+        {/* Subject-wise syllabus weightage now lives on its own page — link out
+            instead of rendering it inline, to keep this page from getting bulky */}
+        {syllabusCount != null && syllabusCount > 0 && (
+          <div className="mb-10">
+            <Link
+              href={`/exams/${slug}/roadmap`}
+              className="group flex items-center justify-between gap-4 bg-gradient-to-br from-indigo-600 to-indigo-800 text-white rounded-2xl p-6 hover:shadow-lg transition"
+            >
+              <div>
+                <h2 className="text-xl font-bold">Subject-wise Weightage & Study Roadmap</h2>
+                <p className="text-indigo-100 text-sm mt-1">
+                  See exactly where the marks come from, subject by subject, and how to sequence your revision for {exam.name}.
+                </p>
+              </div>
+              <span className="text-2xl shrink-0 transition-transform group-hover:translate-x-1">→</span>
+            </Link>
+          </div>
+        )}
 
         {/* Toppers */}
         <div className="bg-white rounded-2xl border border-gray-200 p-6 mb-10">

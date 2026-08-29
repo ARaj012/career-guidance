@@ -2,6 +2,7 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
+import RoadmapProgressTracker from '@/components/RoadmapProgressTracker'
 
 type Step = { title: string; description?: string; duration?: string }
 
@@ -900,6 +901,22 @@ export default async function RoadmapPage({
       </div>
 
       <div className="max-w-4xl mx-auto px-4 py-12">
+        {/* Progress Tracker for logged-in users */}
+        {career && (
+          <div className="mb-8">
+            <RoadmapProgressTracker 
+              roadmapId={career.id} 
+              milestones={phases.flatMap(phase => 
+                phase.nodes.map((node: any) => ({
+                  id: node.id || `${phase.phase_number}-${node.title}`,
+                  title: node.title,
+                  description: node.description
+                }))
+              )} 
+            />
+          </div>
+        )}
+
         {/* Phase overview strip */}
         <div className="flex flex-wrap gap-2 mb-10">
           {phases.map((p, i) => (
