@@ -266,7 +266,7 @@ $$ language plpgsql;
 create or replace function public.get_usage(
   p_user_id uuid,
   p_feature_type text
-) returns table(current_usage integer, limit integer, plan_id text) as $$
+) returns table(current_usage integer, usage_limit integer, plan_id text) as $$
 declare
   v_plan_id text;
   v_limit integer;
@@ -295,7 +295,7 @@ begin
   return query
   select 
     coalesce(u.usage_count, 0) as current_usage,
-    v_limit as limit,
+    v_limit as usage_limit,
     v_plan_id as plan_id
   from public.user_usage u
   where u.user_id = p_user_id 
@@ -340,7 +340,7 @@ begin
   
   -- For numeric limits, check if user hasn't exceeded
   if v_feature_value::text ~ '^[0-9]+$' then
-    return public.get_usage(p_user_id, p_feature).current_usage < v_feature_value::integer;
+    return (select current_usage from public.get_usage(p_user_id, p_feature)) < v_feature_value::integer;
   end if;
   
   -- Default to true for basic features
@@ -363,14 +363,14 @@ end;
 $$ language plpgsql;
 
 -- ============================================
--- VERIFICATION QUERIES
+-- VERIFICATION QUERIES (Commented out - run individually if needed)
 -- ============================================
 
 -- Check subscription plans
-select * from public.subscription_plans order by display_order;
+-- select * from public.subscription_plans order by display_order;
 
--- Check if a user has premium access
-select public.has_feature_access('user_uuid_here', 'roadmaps');
+-- Check if a user has premium access (replace with actual user UUID)
+-- select public.has_feature_access('user_uuid_here', 'roadmaps');
 
--- Get usage stats for a user
-select * from public.get_usage('user_uuid_here', 'ai_chat_messages');
+-- Get usage stats for a user (replace with actual user UUID)
+-- select * from public.get_usage('user_uuid_here', 'ai_chat_messages');

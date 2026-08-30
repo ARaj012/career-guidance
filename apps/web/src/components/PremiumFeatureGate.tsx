@@ -129,10 +129,10 @@ export function PremiumBadge({ feature }: { feature: string }) {
 }
 
 // Usage limit indicator
-export function UsageIndicator({ feature, current, limit }: { feature: string; current: number; limit: number }) {
-  const percentage = limit === -1 ? 100 : Math.min((current / limit) * 100, 100)
-  const isNearLimit = limit !== -1 && percentage >= 80
-  const isAtLimit = limit !== -1 && current >= limit
+export function UsageIndicator({ feature, current, usage_limit }: { feature: string; current: number; usage_limit: number }) {
+  const percentage = usage_limit === -1 ? 100 : Math.min((current / usage_limit) * 100, 100)
+  const isNearLimit = usage_limit !== -1 && percentage >= 80
+  const isAtLimit = usage_limit !== -1 && current >= usage_limit
 
   return (
     <div className="flex items-center gap-2">
@@ -145,7 +145,7 @@ export function UsageIndicator({ feature, current, limit }: { feature: string; c
         />
       </div>
       <span className="text-xs text-gray-500">
-        {limit === -1 ? 'Unlimited' : `${current}/${limit}`}
+        {usage_limit === -1 ? 'Unlimited' : `${current}/${usage_limit}`}
       </span>
     </div>
   )

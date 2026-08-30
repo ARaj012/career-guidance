@@ -8,7 +8,7 @@ export interface Subscription {
 
 export interface UsageStats {
   current_usage: number
-  limit: number
+  usage_limit: number
   plan_id: string
 }
 
@@ -108,11 +108,11 @@ export async function canUseFeature(userId: string, feature: string): Promise<{ 
   
   // If result equals the limit, user has reached the limit
   const subscription = await getUserSubscription(userId)
-  const limit = subscription?.features[feature] as number || 0
+  const usage_limit = subscription?.features[feature] as number || 0
   
   return {
-    canUse: result <= limit,
-    remaining: Math.max(0, limit - result)
+    canUse: result <= usage_limit,
+    remaining: Math.max(0, usage_limit - result)
   }
 }
 

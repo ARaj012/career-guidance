@@ -119,8 +119,74 @@ export default function PricingPage() {
       return
     }
 
-    // Redirect to payment processing (Razorpay integration would go here)
-    alert(`Payment integration for ${planId} plan coming soon!`)
+    // Create Razorpay order
+    try {
+      const res = await fetch('/api/payments/create-order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          planId, 
+          billingCycle 
+        }),
+      })
+
+      const data = await res.json()
+      
+      if (!res.ok) {
+        alert('Failed to create payment order. Please try again.')
+        return
+      }
+
+      // Initialize Razorpay checkout
+      const options = {
+        key: data.keyId,
+        amount: data.amount,
+        currency: data.currency,
+        name: 'CareerGuide',
+        description: `${plans.find(p => p.id === planId)?.name} Plan - ${billingCycle}`,
+        order_id: data.orderId,
+        handler: async function (response: any) {
+          // Verify payment on server
+          const verifyRes = await fetch('/api/payments/verify', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              razorpayOrderId: data.orderId,
+              razorpayPaymentId: response.razorpay_payment_id,
+              razorpaySignature: response.razorpay_signature,
+            }),
+          })
+
+          const verifyData = await verifyRes.json()
+          
+          if (verifyData.success) {
+            setCurrentPlan(planId)
+            alert('Payment successful! Your subscription is now active.')
+            window.location.href = '/subscription'
+          } else {
+            alert('Payment verification failed. Please contact support.')
+          }
+        },
+        prefill: {
+          name: user.user_metadata?.full_name || '',
+          email: user.email || '',
+        },
+        theme: {
+          color: '#4F46E5',
+        },
+        modal: {
+          ondismiss: function() {
+            console.log('Checkout form closed')
+          },
+        },
+      }
+
+      const rzp = new (window as any).Razorpay(options)
+      rzp.open()
+    } catch (error) {
+      console.error('Payment error:', error)
+      alert('Payment processing failed. Please try again.')
+    }
   }
 
   if (loading) {

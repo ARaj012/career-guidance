@@ -24,7 +24,7 @@ interface Plan {
 interface Usage {
   feature_type: string
   current_usage: number
-  limit: number
+  usage_limit: number
   plan_id: string
 }
 
@@ -69,18 +69,18 @@ export default function SubscriptionPage() {
         
         // Get usage for multiple features
         const features = ['ai_chat_messages', 'recommendations', 'save_items']
-        const usageData: Usage[] = []
+        const usageResults: Usage[] = []
         
         for (const feature of features) {
           const { data } = await supabase
             .rpc('get_usage', { p_user_id: user.id, p_feature_type: feature })
           
           if (data) {
-            usageData.push(data as Usage)
+            usageResults.push(data as Usage)
           }
         }
         
-        setUsage(usageData)
+        setUsage(usageResults)
       }
 
       setLoading(false)
@@ -264,14 +264,14 @@ export default function SubscriptionPage() {
                   <div className="flex justify-between mb-2">
                     <span className="text-sm text-gray-700">{getFeatureName(usageItem.feature_type)}</span>
                     <span className="text-sm text-gray-500">
-                      {usageItem.limit === -1 ? 'Unlimited' : `${usageItem.current_usage}/${usageItem.limit}`}
+                      {usageItem.usage_limit === -1 ? 'Unlimited' : `${usageItem.current_usage}/${usageItem.usage_limit}`}
                     </span>
                   </div>
-                  {usageItem.limit !== -1 && (
+                  {usageItem.usage_limit !== -1 && (
                     <div className="w-full bg-gray-100 rounded-full h-2">
                       <div
                         className="bg-indigo-600 h-2 rounded-full transition-all"
-                        style={{ width: `${Math.min((usageItem.current_usage / usageItem.limit) * 100, 100)}%` }}
+                        style={{ width: `${Math.min((usageItem.current_usage / usageItem.usage_limit) * 100, 100)}%` }}
                       />
                     </div>
                   )}
