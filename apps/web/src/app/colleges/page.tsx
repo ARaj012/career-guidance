@@ -6,7 +6,7 @@ import Link from 'next/link'
 import {
   MapPin, GraduationCap, Star, ExternalLink, Filter,
   Search, Building2, ChevronDown, X, Users, Award, IndianRupee,
-  Check, GitCompare,
+  Check, GitCompare, Landmark,
 } from 'lucide-react'
 
 interface College {
@@ -79,6 +79,7 @@ const DOMAIN_KEYWORDS: Record<string, string[]> = {
 export default function CollegesPage() {
   const [colleges, setColleges] = useState<College[]>([])
   const [filtered, setFiltered] = useState<College[]>([])
+  const [scholarshipCounts, setScholarshipCounts] = useState<Record<string, number>>({})
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [selectedState, setSelectedState] = useState('All States')
@@ -93,14 +94,29 @@ export default function CollegesPage() {
 
   useEffect(() => {
     async function fetchColleges() {
-      const { data, error } = await supabase
-        .from('colleges')
-        .select('*')
-        .order('nirf_rank', { ascending: true, nullsFirst: false })
-      if (!error) {
-        setColleges(data || [])
-        setFiltered(data || [])
+      const [collegesRes, scholarshipCountsRes] = await Promise.all([
+        supabase
+          .from('colleges')
+          .select('*')
+          .order('nirf_rank', { ascending: true, nullsFirst: false }),
+        supabase
+          .from('college_scholarship_counts')
+          .select('college_id, scholarship_count'),
+      ])
+
+      if (!collegesRes.error) {
+        setColleges(collegesRes.data || [])
+        setFiltered(collegesRes.data || [])
       }
+
+      if (!scholarshipCountsRes.error) {
+        const counts: Record<string, number> = {}
+        for (const row of scholarshipCountsRes.data || []) {
+          counts[row.college_id] = row.scholarship_count
+        }
+        setScholarshipCounts(counts)
+      }
+
       setLoading(false)
     }
     fetchColleges()
@@ -141,12 +157,13 @@ export default function CollegesPage() {
       if (sortBy === 'fees_low') return (a.annual_fees_min ?? 999999999) - (b.annual_fees_min ?? 999999999)
       if (sortBy === 'fees_high') return (b.annual_fees_max ?? 0) - (a.annual_fees_max ?? 0)
       if (sortBy === 'students') return (b.total_students ?? 0) - (a.total_students ?? 0)
+      if (sortBy === 'scholarships') return (scholarshipCounts[b.id] ?? 0) - (scholarshipCounts[a.id] ?? 0)
       return 0
     })
 
     setFiltered(result)
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [search, selectedState, selectedType, selectedDomain, sortBy, featuredOnly, colleges])
+  }, [search, selectedState, selectedType, selectedDomain, sortBy, featuredOnly, colleges, scholarshipCounts])
 
   const clearFilters = () => {
     setSearch('')
@@ -258,6 +275,7 @@ export default function CollegesPage() {
               <option value="fees_low">Sort: Lowest Fees</option>
               <option value="fees_high">Sort: Highest Fees</option>
               <option value="students">Sort: Largest</option>
+              <option value="scholarships">Sort: Most Scholarships</option>
             </select>
           </div>
 
@@ -412,12 +430,20 @@ export default function CollegesPage() {
                     <span>{college.city ? `${college.city}, ` : ''}{college.state}</span>
                   </div>
 
-                  {/* Fees Badge */}
-                  <div className="flex items-center gap-1.5 mb-3">
-                    <IndianRupee className="w-3.5 h-3.5 text-green-500 flex-shrink-0" />
-                    <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${college.annual_fees_min === 0 && college.annual_fees_max === 0 ? 'bg-emerald-50 text-emerald-700' : 'bg-gray-50 text-gray-700'}`}>
-                      {formatFees(college.annual_fees_min, college.annual_fees_max)}
-                    </span>
+                  {/* Fees + Scholarships Badges */}
+                  <div className="flex flex-wrap items-center gap-1.5 mb-3">
+                    <div className="flex items-center gap-1.5">
+                      <IndianRupee className="w-3.5 h-3.5 text-green-500 flex-shrink-0" />
+                      <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${college.annual_fees_min === 0 && college.annual_fees_max === 0 ? 'bg-emerald-50 text-emerald-700' : 'bg-gray-50 text-gray-700'}`}>
+                        {formatFees(college.annual_fees_min, college.annual_fees_max)}
+                      </span>
+                    </div>
+                    {scholarshipCounts[college.id] > 0 && (
+                      <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-600">
+                        <Landmark className="w-3 h-3" />
+                        {scholarshipCounts[college.id]} scholarships
+                      </span>
+                    )}
                   </div>
 
                   {college.why_join && (

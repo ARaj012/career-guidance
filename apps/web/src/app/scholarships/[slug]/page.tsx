@@ -1,7 +1,29 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
-import { Calendar, DollarSign, GraduationCap, MapPin, ExternalLink, FileText, User, CheckCircle2 } from 'lucide-react'
+import { GraduationCap, MapPin, ExternalLink, FileText, User, CheckCircle2, ListOrdered } from 'lucide-react'
+
+interface Scholarship {
+  id: string
+  name: string
+  slug: string
+  description: string
+  how_to_apply: string | null
+  provider: string
+  amount_min: number | null
+  amount_max: number | null
+  amount_type: string
+  eligibility_criteria: string
+  required_documents: string[] | null
+  application_deadline: string | null
+  application_url: string | null
+  category: string
+  level: string
+  field_of_study: string[] | null
+  country: string
+  state: string | null
+  is_active: boolean
+}
 
 export default async function ScholarshipDetailPage({
   params,
@@ -11,21 +33,23 @@ export default async function ScholarshipDetailPage({
   const { slug } = await params
   const supabase = await createServerSupabaseClient()
 
-  const { data: scholarship } = await supabase
+  const { data } = await supabase
     .from('scholarships')
     .select('*')
     .eq('slug', slug)
     .single()
 
+  const scholarship = data as Scholarship | null
+
   if (!scholarship) {
     notFound()
   }
 
-  const formatAmount = (scholarship: any) => {
+  const formatAmount = (scholarship: Scholarship) => {
     if (scholarship.amount_type === 'full_tuition') return 'Full Tuition'
     if (scholarship.amount_type === 'partial_tuition') return 'Partial Tuition'
     if (scholarship.amount_type === 'stipend') return 'Stipend'
-    
+
     if (scholarship.amount_min && scholarship.amount_max) {
       return `₹${(scholarship.amount_min / 100000).toFixed(1)}L - ₹${(scholarship.amount_max / 100000).toFixed(1)}L`
     }
@@ -51,10 +75,22 @@ export default async function ScholarshipDetailPage({
       arts: { bg: 'bg-purple-50', text: 'text-purple-700' },
       minority: { bg: 'bg-yellow-50', text: 'text-yellow-700' },
       women: { bg: 'bg-pink-50', text: 'text-pink-700' },
+      government: { bg: 'bg-emerald-50', text: 'text-emerald-700' },
       general: { bg: 'bg-gray-50', text: 'text-gray-700' },
     }
     return colors[category] || { bg: 'bg-gray-50', text: 'text-gray-700' }
   }
+
+  // how_to_apply is stored as numbered steps separated by newlines,
+  // e.g. "1. Visit the portal...\n2. Register...\n3. ..."
+  // Split into a clean array and strip the leading "1. " numbering
+  // since we render our own numbered list markers in the UI.
+  const applySteps: string[] = scholarship.how_to_apply
+    ? scholarship.how_to_apply
+        .split('\n')
+        .map((step: string) => step.replace(/^\d+\.\s*/, '').trim())
+        .filter((step: string) => step.length > 0)
+    : []
 
   const catColor = getCategoryColor(scholarship.category)
 
@@ -120,6 +156,26 @@ export default async function ScholarshipDetailPage({
             <div className="prose prose-sm text-gray-600">
               <p>{scholarship.eligibility_criteria}</p>
             </div>
+          </div>
+        )}
+
+        {/* How to Apply */}
+        {applySteps.length > 0 && (
+          <div className="bg-white rounded-2xl border border-gray-200 p-6 mb-8">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+              <ListOrdered className="w-5 h-5 text-emerald-500" />
+              How to Apply
+            </h2>
+            <ol className="space-y-4">
+              {applySteps.map((step, index) => (
+                <li key={index} className="flex items-start gap-3">
+                  <span className="flex items-center justify-center w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 text-xs font-semibold shrink-0 mt-0.5">
+                    {index + 1}
+                  </span>
+                  <span className="text-sm text-gray-600 leading-relaxed">{step}</span>
+                </li>
+              ))}
+            </ol>
           </div>
         )}
 

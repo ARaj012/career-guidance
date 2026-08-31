@@ -8,6 +8,10 @@ import PlacementCharts from "@/components/college/PlacementCharts";
 import CutoffTrendsChart from "@/components/college/CutoffTrendsChart";
 import CollegeFaqs from "@/components/college/CollegeFaqs";
 import CollegeReviews from "@/components/college/CollegeReviews";
+import CollegeScholarships, {
+  ScholarshipDetail,
+  ScholarshipUserProfile,
+} from "@/components/college/CollegeScholarships";
 import {
   MapPin,
   GraduationCap,
@@ -144,7 +148,7 @@ export default async function CollegeDetailPage({
   const placements: any[] = placementsRaw ?? [];
   const latestPlacement = placements[0] ?? null;
 
-  // NEW: year-wise student enrollment (last 8 years) — powers the students-vs-years chart
+  // year-wise student enrollment (last 8 years) — powers the students-vs-years chart
   const { data: enrollmentRaw } = await supabase
     .from("college_enrollment_history")
     .select("year, total_students")
@@ -154,7 +158,7 @@ export default async function CollegeDetailPage({
 
   const enrollmentHistory: any[] = enrollmentRaw ?? [];
 
-  // NEW: commonly asked questions
+  // commonly asked questions
   const { data: faqsRaw } = await supabase
     .from("college_faqs")
     .select("id, question, answer")
@@ -162,6 +166,31 @@ export default async function CollegeDetailPage({
     .order("order_index", { ascending: true });
 
   const faqs: any[] = faqsRaw ?? [];
+
+  // NEW: scholarships & govt schemes that apply to this specific college
+  const { data: scholarshipsRaw } = await supabase
+    .from("college_scholarships_detail")
+    .select("*")
+    .eq("college_id", college.id)
+    .order("amount_max", { ascending: false, nullsFirst: false });
+
+  const scholarships: ScholarshipDetail[] = scholarshipsRaw ?? [];
+
+  // NEW: signed-in student's profile, used only to personalize which
+  // scholarships are flagged as a "good match" — no extra data is fabricated
+  let userProfile: ScholarshipUserProfile | null = null;
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (user) {
+    const { data: profileRaw } = await supabase
+      .from("user_profiles")
+      .select("state, stream, current_education, class_level")
+      .eq("user_id", user.id)
+      .single();
+    userProfile = profileRaw ?? null;
+  }
 
   // Group courses by degree type
   const degreeGroups = courses.reduce<Record<string, any[]>>((acc, c) => {
@@ -393,6 +422,16 @@ export default async function CollegeDetailPage({
           </div>
         )}
 
+        {/* NEW: Scholarships & Govt Schemes for this specific college */}
+        <div className="mb-6">
+          <CollegeScholarships
+            scholarships={scholarships}
+            collegeName={college.name}
+            collegeState={college.state}
+            userProfile={userProfile}
+          />
+        </div>
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Courses */}
           <div className="lg:col-span-2 space-y-6">
@@ -527,19 +566,19 @@ export default async function CollegeDetailPage({
               </div>
             )}
 
-            {/* NEW: Student Enrollment Trend (bar chart, last 6-8 years) */}
+            {/* Student Enrollment Trend (bar chart, last 6-8 years) */}
             <EnrollmentChart data={enrollmentHistory} />
 
-            {/* NEW: Placement Trends — click to expand (avg & highest package vs year, last 5 years) */}
+            {/* Placement Trends — click to expand (avg & highest package vs year, last 5 years) */}
             <PlacementCharts data={placements} />
 
-            {/* NEW: Admission Cutoff Trends — click to expand, only shown for exam/category series with 2+ real years */}
+            {/* Admission Cutoff Trends — click to expand, only shown for exam/category series with 2+ real years */}
             <CutoffTrendsChart cutoffs={cutoffTrendData} />
 
-            {/* NEW: FAQs */}
+            {/* FAQs */}
             <CollegeFaqs faqs={faqs} />
 
-            {/* NEW: Student ratings & comments */}
+            {/* Student ratings & comments */}
             <CollegeReviews collegeId={college.id} />
           </div>
 

@@ -41,13 +41,20 @@ export default function PricingPage() {
 
       if (user) {
         // Load user's current subscription
-        const { data: subData } = await supabase
+        const { data: subData, error: subError } = await supabase
           .from('user_subscriptions')
           .select('plan_id')
           .eq('user_id', user.id)
           .eq('status', 'active')
           .single()
-        
+
+        if (subError && subError.code !== 'PGRST116') {
+          console.error('Subscription load error:', subError)
+        } else if (subError && subError.code === 'PGRST116') {
+          // No subscription found - this is expected for new users
+          console.log('No existing subscription found for user')
+        }
+
         setCurrentPlan(subData?.plan_id || 'free')
       }
 
@@ -105,13 +112,13 @@ export default function PricingPage() {
       // Downgrade to free
       const { error } = await supabase
         .from('user_subscriptions')
-        .update({ 
+        .update({
           plan_id: 'free',
           status: 'active',
           cancel_at_period_end: true
         })
         .eq('user_id', user.id)
-      
+
       if (!error) {
         setCurrentPlan('free')
         alert('Successfully downgraded to Free plan')
@@ -119,25 +126,66 @@ export default function PricingPage() {
       return
     }
 
-    // Create Razorpay order
+    // Create payment order
     try {
       const res = await fetch('/api/payments/create-order', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          planId, 
-          billingCycle 
+        body: JSON.stringify({
+          planId,
+          billingCycle
         }),
       })
 
       const data = await res.json()
-      
+
       if (!res.ok) {
         alert('Failed to create payment order. Please try again.')
         return
       }
 
-      // Initialize Razorpay checkout
+      // Check if using mock mode
+      if (data.keyId === 'rzp_mock_test_key') {
+        // Mock mode - simulate payment flow
+        console.log('🧪 MOCK MODE: Simulating payment flow')
+
+        // Simulate payment confirmation
+        const confirmed = confirm(
+          `🧪 MOCK PAYMENT MODE\n\n` +
+          `You are about to subscribe to ${plans.find(p => p.id === planId)?.name} Plan (${billingCycle})\n` +
+          `Amount: ₹${data.amount / 100}\n\n` +
+          `This is a test - no real payment will be processed.\n\n` +
+          `Click OK to simulate successful payment.`
+        )
+
+        if (confirmed) {
+          // Simulate payment verification with plan info
+          const verifyRes = await fetch('/api/payments/verify', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              razorpayOrderId: data.orderId,
+              razorpayPaymentId: `pay_mock_${Date.now()}`,
+              razorpaySignature: 'mock_signature',
+              planId: planId, // Pass planId directly
+              billingCycle: billingCycle // Pass billingCycle directly
+            }),
+          })
+
+          const verifyData = await verifyRes.json()
+
+          if (verifyData.success) {
+            setCurrentPlan(planId)
+            alert('✅ Mock payment successful! Your subscription is now active.')
+            window.location.href = '/subscription'
+          } else {
+            alert('❌ Mock payment verification failed. Please check console for details.')
+          }
+        }
+        return
+      }
+
+      // Real Razorpay checkout
       const options = {
         key: data.keyId,
         amount: data.amount,
@@ -158,7 +206,7 @@ export default function PricingPage() {
           })
 
           const verifyData = await verifyRes.json()
-          
+
           if (verifyData.success) {
             setCurrentPlan(planId)
             alert('Payment successful! Your subscription is now active.')

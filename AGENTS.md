@@ -110,7 +110,12 @@ NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
 ADMIN_EMAILS=admin@example.com
+RAZORPAY_KEY_ID=your_razorpay_key_id (optional - mock mode if missing)
+RAZORPAY_KEY_SECRET=your_razorpay_key_secret (optional - mock mode if missing)
+RAZORPAY_WEBHOOK_SECRET=your_razorpay_webhook_secret (optional - mock mode if missing)
 ```
+
+**Note**: The application automatically uses mock payment mode if Razorpay credentials are not provided. This allows you to test the entire payment flow UI/UX without real payment integration.
 
 ## Authentication Flow
 1. Students sign up via Google OAuth (`/login`)
@@ -149,3 +154,5 @@ ADMIN_EMAILS=admin@example.com
 - Verify RLS policies are applied
 - Test admin email access control
 - Verify AI recommendation system connectivity
+- Mock payment system works without Razorpay credentials
+- See `VERCEL_DEPLOYMENT_GUIDE.md` for detailed deployment instructions

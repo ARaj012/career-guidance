@@ -23,6 +23,9 @@ Your Career Guidance Platform is **complete and production-ready** with all core
 - **Comparison Tools**: Compare careers and colleges side-by-side
 - **Recommendation History**: Track past AI recommendations
 - **AI Chat Assistant**: Site-wide chat widget with Groq integration for real-time career guidance
+- **Freemium Subscription**: `/pricing` - Razorpay payment integration with mock mode for testing
+- **Subscription Management**: `/subscription` - View and manage subscription status
+- **Mock Payment System**: Automatic mock mode when Razorpay credentials are not configured
 
 ### 🔐 Admin Panel (Complete)
 - **Dashboard**: `/admin` - Overview with stats, system health, activity logs
@@ -34,12 +37,14 @@ Your Career Guidance Platform is **complete and production-ready** with all core
 - **Audit Logging**: `/admin/audit` - Track all admin actions for accountability
 - **Notifications**: `/admin/notifications` - Manage system notifications
 - **Settings**: `/admin/settings` - System configuration and admin email management
+- **Subscription Management**: `/admin/subscriptions` - View and manage user subscriptions
 
 ### 🗄️ Database (Complete)
 - **Core Tables**: careers, colleges, exams, skills, subjects, roadmaps
 - **Content Tables**: scholarships, blog_posts
 - **User Tables**: user_profiles, user_accounts, user_saved_careers, user_saved_colleges, user_saved_exams
 - **Admin Tables**: admin_audit_logs, admin_notifications
+- **Freemium Tables**: subscriptions, payment_history, subscription_plans
 - **RLS Policies**: Proper row-level security for all tables
 - **Indexes**: Performance optimization for all major queries
 
@@ -48,6 +53,7 @@ Your Career Guidance Platform is **complete and production-ready** with all core
 - **Chat API**: `/api/chat` - AI-powered career guidance
 - **Recommendations API**: `/api/recommendations` - AI career matching
 - **Auth Callback**: `/auth/callback` - OAuth handling with user sync
+- **Payment APIs**: `/api/payments/*` - Razorpay payment integration with graceful degradation
 
 ### 🛡️ Security (Complete)
 - **Authentication**: Supabase Auth with Google OAuth
@@ -127,6 +133,7 @@ Your Career Guidance Platform is **complete and production-ready** with all core
 - [x] Test comparison features
 - [x] Verify production build works
 - [x] Test responsive design on mobile devices
+- [x] Set up mock payment system for testing (optional - real payments work when configured)
 
 ### Recommended Before Launch
 - [ ] Add proper error boundaries
@@ -154,13 +161,19 @@ Your Career Guidance Platform is **ready for production deployment**. All core f
 - `AGENTS.md` - Development guide and troubleshooting
 - `supabase/fix-rls-policies.sql` - Database security setup
 - `apps/web/.env.local` - Environment configuration
+- `RAZORPAY_INTEGRATION.md` - Payment integration setup guide
+- `FREEMIUM_IMPLEMENTATION.md` - Freemium feature documentation
+- `MOCK_PAYMENT_SETUP.md` - Mock payment testing guide
 
 ### Deployment Steps
 1. Run the RLS SQL script in Supabase SQL Editor
 2. Set all environment variables in production
-3. Deploy to your hosting platform (Vercel, Netlify, etc.)
-4. Test all critical user flows
-5. Monitor initial user activity
+3. Set up Razorpay account and add payment environment variables (optional)
+4. Deploy to your hosting platform (Vercel, Netlify, etc.)
+5. Test all critical user flows
+6. Monitor initial user activity
+
+**Note**: The application is designed to work without Razorpay credentials. Payment features will be gracefully disabled if the environment variables are not set, allowing the rest of the application to function normally.
 
 ---
 

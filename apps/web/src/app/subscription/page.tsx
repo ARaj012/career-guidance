@@ -45,13 +45,30 @@ export default function SubscriptionPage() {
       }
 
       // Load subscription
-      const { data: subData } = await supabase
+      const { data: subData, error: subError } = await supabase
         .from('user_subscriptions')
         .select('*')
         .eq('user_id', user.id)
         .single()
-      
-      setSubscription(subData)
+
+      if (subError && subError.code !== 'PGRST116') {
+        console.error('Subscription load error:', subError)
+      } else if (subError && subError.code === 'PGRST116') {
+        // No subscription found - this is expected for new users
+        console.log('No existing subscription found for user')
+        // Set a default free subscription for display
+        setSubscription({
+          id: '',
+          plan_id: 'free',
+          status: 'active',
+          billing_cycle: 'monthly',
+          current_period_start: new Date().toISOString(),
+          current_period_end: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
+          cancel_at_period_end: false
+        })
+      } else {
+        setSubscription(subData)
+      }
 
       if (subData) {
         // Load plan details
@@ -214,7 +231,7 @@ export default function SubscriptionPage() {
                 <div>
                   <p className="text-xs text-gray-500">Current Period</p>
                   <p className="text-sm font-medium text-gray-900">
-                    {formatDate(subscription.current_period_start)} - {formatDate(subscription.current_period_end)}
+                    {subscription.current_period_start ? formatDate(subscription.current_period_start) : 'N/A'} - {subscription.current_period_end ? formatDate(subscription.current_period_end) : 'N/A'}
                   </p>
                 </div>
               </div>
@@ -222,7 +239,7 @@ export default function SubscriptionPage() {
                 <CreditCard className="w-5 h-5 text-gray-400" />
                 <div>
                   <p className="text-xs text-gray-500">Billing Cycle</p>
-                  <p className="text-sm font-medium text-gray-900 capitalize">{subscription.billing_cycle}</p>
+                  <p className="text-sm font-medium text-gray-900 capitalize">{subscription.billing_cycle || 'N/A'}</p>
                 </div>
               </div>
             </div>
@@ -230,7 +247,7 @@ export default function SubscriptionPage() {
             {subscription.cancel_at_period_end && (
               <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-4">
                 <p className="text-amber-800 text-sm">
-                  Your subscription will be cancelled on {formatDate(subscription.current_period_end)}. 
+                  Your subscription will be cancelled on {subscription.current_period_end ? formatDate(subscription.current_period_end) : 'the end of your billing period'}.
                   You can reactivate it anytime before then.
                 </p>
                 <button

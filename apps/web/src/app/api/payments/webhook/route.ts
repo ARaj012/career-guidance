@@ -4,8 +4,25 @@ import crypto from 'crypto'
 
 export const runtime = 'nodejs'
 
+// Mock mode flag - set to true for testing without real Razorpay
+const MOCK_MODE = !process.env.RAZORPAY_WEBHOOK_SECRET
+
 export async function POST(req: NextRequest) {
   try {
+    // Mock mode for testing without real Razorpay
+    if (MOCK_MODE) {
+      console.log('🧪 MOCK MODE: Webhook received (simulated)')
+      return NextResponse.json({ success: true, message: 'Mock webhook processed' })
+    }
+
+    // Check if webhook secret is configured
+    if (!process.env.RAZORPAY_WEBHOOK_SECRET) {
+      return NextResponse.json(
+        { error: 'Webhook secret not configured. Please add RAZORPAY_WEBHOOK_SECRET to environment variables.' },
+        { status: 500 }
+      )
+    }
+
     const body = await req.text()
     const signature = req.headers.get('x-razorpay-signature') as string
 

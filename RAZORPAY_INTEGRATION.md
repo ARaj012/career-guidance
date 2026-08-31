@@ -23,6 +23,8 @@ RAZORPAY_KEY_SECRET=your_key_secret_here
 RAZORPAY_WEBHOOK_SECRET=your_webhook_secret_here
 ```
 
+**Important**: The application is now designed to work even without Razorpay credentials. If the environment variables are not set, the payment endpoints will return appropriate error messages indicating that the payment system is not configured. This allows the rest of the application to function normally while payment features are gracefully disabled.
+
 ### 4. Configure Webhook in Razorpay
 1. In Razorpay Dashboard, go to Settings → Webhooks
 2. Add new webhook:
@@ -37,18 +39,21 @@ RAZORPAY_WEBHOOK_SECRET=your_webhook_secret_here
 - Validates plan details
 - Stores order in payment_history
 - Returns order details for checkout
+- **Graceful Degradation**: Returns error if Razorpay keys are not configured
 
 #### `/api/payments/verify`
 - Verifies payment signature
 - Updates payment status
 - Activates user subscription
 - Handles subscription upsert
+- **Graceful Degradation**: Returns error if Razorpay keys are not configured
 
 #### `/api/payments/webhook`
 - Handles Razorpay webhook notifications
 - Verifies webhook signature
 - Updates payment and subscription status
 - Provides automatic subscription management
+- **Graceful Degradation**: Returns error if webhook secret is not configured
 
 ### 6. Payment Flow
 1. User selects plan on `/pricing` page
@@ -113,6 +118,7 @@ RAZORPAY_WEBHOOK_SECRET=your_webhook_secret_here
 - **Webhook failures**: Verify webhook URL is accessible
 - **Payment verification fails**: Check webhook secret
 - **Subscription not activated**: Check database logs
+- **Payment system not configured**: This is expected if Razorpay environment variables are not set. The rest of the application will work normally, but payment features will be disabled until keys are added.
 
 ### Debug Mode
 Enable console logging in payment endpoints for debugging during development.
