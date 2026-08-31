@@ -53,6 +53,7 @@ export async function POST(req: NextRequest) {
       // Extract plan info from client request or database
       let planId = clientPlanId || 'premium' // Use client-provided planId or default
       let billingCycle = clientBillingCycle || 'monthly' // Use client-provided billingCycle or default
+      let existingMetadata: any = null
 
       // Try to get the order from database to extract plan info if not provided by client
       if (!clientPlanId || !clientBillingCycle) {
@@ -65,6 +66,7 @@ export async function POST(req: NextRequest) {
         if (orderData && orderData.metadata) {
           planId = orderData.metadata.plan_id || planId
           billingCycle = orderData.metadata.billing_cycle || billingCycle
+          existingMetadata = orderData.metadata
           console.log('Extracted plan info from database:', { planId, billingCycle })
         } else {
           console.log('Using default plan info:', { planId, billingCycle })
@@ -98,7 +100,7 @@ export async function POST(req: NextRequest) {
             status: 'completed',
             razorpay_payment_id: `pay_mock_${Date.now()}`,
             metadata: {
-              ...data?.metadata,
+              ...existingMetadata,
               verified: true,
               verified_at: new Date().toISOString()
             }
