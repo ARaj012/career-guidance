@@ -8,9 +8,10 @@ export default function AdminSettingsPage() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // In a real application, you might fetch this from an API
-    // For now, we'll show a placeholder
-    setAdminEmails(['admin@example.com']) // Placeholder
+    // Load admin emails from environment variable (parsed client-side)
+    const adminEmailsEnv = process.env.NEXT_PUBLIC_ADMIN_EMAILS || ''
+    const emails = adminEmailsEnv.split(',').map(e => e.trim()).filter(Boolean)
+    setAdminEmails(emails.length > 0 ? emails : ['Not configured'])
     setLoading(false)
   }, [])
 

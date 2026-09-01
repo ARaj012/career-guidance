@@ -98,6 +98,9 @@ export default function ProfilePage() {
   const [board, setBoard]               = useState('')
   const [percentage, setPercentage]     = useState('')
   const [state, setState]               = useState('')
+  const [class10State, setClass10State] = useState('')
+  const [class12State, setClass12State] = useState('')
+  const [belongingState, setBelongingState] = useState('')
   const [subjects, setSubjects]         = useState<string[]>([])
   const [customSubject, setCustomSubject] = useState('')
   const [targetExams, setTargetExams]   = useState<string[]>([])
@@ -143,6 +146,9 @@ export default function ProfilePage() {
         setBoard(profile.board || '')
         setPercentage(profile.percentage?.toString() || '')
         setState(profile.state || '')
+        setClass10State(profile.class10_state || '')
+        setClass12State(profile.class12_state || '')
+        setBelongingState(profile.belonging_state || '')
         setSubjects(profile.subjects || [])
         setTargetExams(profile.target_exams || [])
         setCareerGoal(profile.career_goal || '')
@@ -169,6 +175,9 @@ export default function ProfilePage() {
         board,
         percentage: percentage ? parseFloat(percentage) : null,
         state,
+        class10_state: class10State,
+        class12_state: class12State,
+        belonging_state: belongingState,
         subjects,
         target_exams: targetExams,
         career_goal: careerGoal,
@@ -441,6 +450,42 @@ export default function ProfilePage() {
                         <label className="block text-xs font-medium text-gray-500 mb-1.5">Home State *</label>
                         <div className="relative">
                           <select value={state} onChange={e => setState(e.target.value)}
+                            className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white appearance-none">
+                            <option value="">Select state...</option>
+                            {INDIAN_STATES.map(o => <option key={o}>{o}</option>)}
+                          </select>
+                          <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-medium text-gray-500 mb-1.5">Class 10 Study State</label>
+                        <div className="relative">
+                          <select value={class10State} onChange={e => setClass10State(e.target.value)}
+                            className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white appearance-none">
+                            <option value="">Select state...</option>
+                            {INDIAN_STATES.map(o => <option key={o}>{o}</option>)}
+                          </select>
+                          <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-medium text-gray-500 mb-1.5">Class 12 Study State</label>
+                        <div className="relative">
+                          <select value={class12State} onChange={e => setClass12State(e.target.value)}
+                            className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white appearance-none">
+                            <option value="">Select state...</option>
+                            {INDIAN_STATES.map(o => <option key={o}>{o}</option>)}
+                          </select>
+                          <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-medium text-gray-500 mb-1.5">Belonging State (Domicile)</label>
+                        <div className="relative">
+                          <select value={belongingState} onChange={e => setBelongingState(e.target.value)}
                             className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white appearance-none">
                             <option value="">Select state...</option>
                             {INDIAN_STATES.map(o => <option key={o}>{o}</option>)}

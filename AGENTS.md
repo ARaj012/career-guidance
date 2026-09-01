@@ -48,6 +48,11 @@ npm start
 - **Profile Management**: `/profile` - Student profile completion and settings
 - **Interactive Roadmaps**: `/exams/[slug]/roadmap` - Step-by-step career guidance
 - **Save/Bookmark**: Save careers, colleges, and exams for later reference
+- **Comparison Tools**: Compare careers and colleges side-by-side
+- **Recommendation History**: Track past AI recommendations
+- **AI Chat Assistant**: Site-wide chat widget with Groq integration
+- **Freemium Subscription**: `/pricing` - Mock payment system for testing payment flow
+- **Subscription Management**: `/subscription` - View and manage subscription status
 
 ### Admin Panel Features
 - **Dashboard**: `/admin` - Overview with stats, system health, and activity logs
@@ -110,9 +115,14 @@ NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
 ADMIN_EMAILS=admin@example.com
+NEXT_PUBLIC_ADMIN_EMAILS=admin@example.com
+GOOGLE_CLIENT_ID=your_google_client_id
+GOOGLE_CLIENT_SECRET=your_google_client_secret
+GROQ_API_KEY=your_groq_api_key (optional - for chat features)
 RAZORPAY_KEY_ID=your_razorpay_key_id (optional - mock mode if missing)
 RAZORPAY_KEY_SECRET=your_razorpay_key_secret (optional - mock mode if missing)
 RAZORPAY_WEBHOOK_SECRET=your_razorpay_webhook_secret (optional - mock mode if missing)
+NEXT_PUBLIC_APP_URL=http://localhost:3000
 ```
 
 **Note**: The application automatically uses mock payment mode if Razorpay credentials are not provided. This allows you to test the entire payment flow UI/UX without real payment integration.
@@ -129,6 +139,11 @@ RAZORPAY_WEBHOOK_SECRET=your_razorpay_webhook_secret (optional - mock mode if mi
 3. **Data Visibility**: Added RLS policies for blog posts and scholarships
 4. **Array Field Handling**: Fixed comma-separated string to array conversion
 5. **Navigation Updates**: Added Scholarships and Blog to main navigation
+6. **Payment Integration**: Added mock payment system with graceful degradation
+7. **Security Improvements**: Enhanced authentication checks for production vs development
+8. **Error Handling**: Added centralized error handling and logging utilities
+9. **API Consistency**: Created standardized API response utilities
+10. **Frontend Robustness**: Added ErrorBoundary component for better error handling
 
 ## Testing Checklist
 - [ ] Student signup and profile completion

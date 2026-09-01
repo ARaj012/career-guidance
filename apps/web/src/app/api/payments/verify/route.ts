@@ -46,8 +46,13 @@ export async function POST(req: NextRequest) {
       // For mock mode, allow payment even without perfect auth for testing
       if (!user) {
         console.log('🧪 MOCK MODE: No user authenticated, but allowing for testing')
-        // Create a valid mock UUID for testing
-        user = { id: '00000000-0000-0000-0000-000000000000' }
+        // Create a valid mock UUID for testing (only in development)
+        if (process.env.NODE_ENV === 'development') {
+          user = { id: '00000000-0000-0000-0000-000000000000' }
+        } else {
+          // In production, require authentication even for mock mode
+          return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
+        }
       }
 
       // Extract plan info from client request or database

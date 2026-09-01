@@ -194,30 +194,52 @@ export default async function ExamDetailPage({
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="bg-gradient-to-br from-indigo-600 to-indigo-800 text-white">
-        <div className="max-w-4xl mx-auto px-4 py-14">
-          <Link href="/exams" className="text-indigo-200 hover:text-white text-sm">
+      <div className="bg-gradient-to-br from-indigo-600 via-indigo-700 to-purple-800 text-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
+          <Link href="/exams" className="text-indigo-200 hover:text-white text-sm inline-flex items-center gap-1 mb-4">
             ← Back to Exams
           </Link>
-          <h1 className="text-3xl md:text-4xl font-bold mt-4">{exam.name}</h1>
-          {exam.description && <p className="text-indigo-100 mt-3 text-lg max-w-2xl">{exam.description}</p>}
-          <div className="flex flex-wrap gap-3 mt-6">
-            {exam.exam_level && <span className="bg-white/10 backdrop-blur px-4 py-1.5 rounded-full text-sm">🌐 {exam.exam_level}</span>}
-            {exam.conducting_body && <span className="bg-white/10 backdrop-blur px-4 py-1.5 rounded-full text-sm">🏛️ {exam.conducting_body}</span>}
-            {exam.frequency && <span className="bg-white/10 backdrop-blur px-4 py-1.5 rounded-full text-sm">📅 {exam.frequency}</span>}
-            {exam.mode && <span className="bg-white/10 backdrop-blur px-4 py-1.5 rounded-full text-sm">{exam.mode === 'Online' ? '💻' : '📝'} {exam.mode}</span>}
+          <div className="space-y-4">
+            <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold leading-tight">{exam.name}</h1>
+            {exam.description && (
+              <p className="text-indigo-100 text-base sm:text-lg md:text-xl max-w-3xl lg:max-w-4xl leading-relaxed">
+                {exam.description}
+              </p>
+            )}
+          </div>
+          <div className="flex flex-wrap gap-2 sm:gap-3 mt-6">
+            {exam.exam_level && (
+              <span className="bg-white/10 backdrop-blur px-3 py-1.5 sm:px-4 sm:py-2 rounded-full text-xs sm:text-sm">
+                🌐 {exam.exam_level}
+              </span>
+            )}
+            {exam.conducting_body && (
+              <span className="bg-white/10 backdrop-blur px-3 py-1.5 sm:px-4 sm:py-2 rounded-full text-xs sm:text-sm">
+                🏛️ {exam.conducting_body}
+              </span>
+            )}
+            {exam.frequency && (
+              <span className="bg-white/10 backdrop-blur px-3 py-1.5 sm:px-4 sm:py-2 rounded-full text-xs sm:text-sm">
+                📅 {exam.frequency}
+              </span>
+            )}
+            {exam.mode && (
+              <span className="bg-white/10 backdrop-blur px-3 py-1.5 sm:px-4 sm:py-2 rounded-full text-xs sm:text-sm">
+                {exam.mode === 'Online' ? '💻' : '📝'} {exam.mode}
+              </span>
+            )}
             {nationalYearsAsc.length > 0 && (
-              <span className="bg-white/10 backdrop-blur px-4 py-1.5 rounded-full text-sm">
+              <span className="bg-white/10 backdrop-blur px-3 py-1.5 sm:px-4 sm:py-2 rounded-full text-xs sm:text-sm">
                 📊 {nationalYearsAsc[0]}–{nationalYearsAsc[nationalYearsAsc.length - 1]} cutoff data
               </span>
             )}
             {nationalCutoffs.length > 0 && (
-              <span className="bg-white/10 backdrop-blur px-4 py-1.5 rounded-full text-sm">
+              <span className="bg-white/10 backdrop-blur px-3 py-1.5 sm:px-4 sm:py-2 rounded-full text-xs sm:text-sm">
                 📋 {nationalCutoffs.length} cutoff record{nationalCutoffs.length > 1 ? 's' : ''}
               </span>
             )}
             {nationalYearsAsc.length === 0 && years.length > 0 && (
-              <span className="bg-white/10 backdrop-blur px-4 py-1.5 rounded-full text-sm">
+              <span className="bg-white/10 backdrop-blur px-3 py-1.5 sm:px-4 sm:py-2 rounded-full text-xs sm:text-sm">
                 📊 {years.length} year{years.length > 1 ? 's' : ''} of cutoff data
               </span>
             )}
@@ -225,27 +247,27 @@ export default async function ExamDetailPage({
         </div>
       </div>
 
-      <div className="max-w-4xl mx-auto px-4 py-12">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
         {/* Key dates */}
-        <div className="bg-white rounded-2xl border border-gray-200 p-6 mb-8">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">
+        <div className="bg-white rounded-2xl border border-gray-200 p-4 sm:p-6 mb-6 sm:mb-8">
+          <h2 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4">
             📅 Key Dates{latestSchedule?.year ? ` (${latestSchedule.year})` : ''}
           </h2>
           {latestSchedule ? (
-            <div className="grid sm:grid-cols-3 gap-4">
-              <div className="bg-gray-50 rounded-xl p-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+              <div className="bg-gray-50 rounded-xl p-3 sm:p-4">
                 <p className="text-xs text-gray-500">Registration</p>
-                <p className="font-medium text-gray-900 mt-1">
+                <p className="font-medium text-gray-900 mt-1 text-sm sm:text-base">
                   {formatDate(latestSchedule.registration_start) ?? 'TBA'} – {formatDate(latestSchedule.registration_end) ?? 'TBA'}
                 </p>
               </div>
-              <div className="bg-gray-50 rounded-xl p-4">
+              <div className="bg-gray-50 rounded-xl p-3 sm:p-4">
                 <p className="text-xs text-gray-500">Exam Date</p>
-                <p className="font-medium text-gray-900 mt-1">{formatDate(latestSchedule.exam_date_start) ?? 'TBA'}</p>
+                <p className="font-medium text-gray-900 mt-1 text-sm sm:text-base">{formatDate(latestSchedule.exam_date_start) ?? 'TBA'}</p>
               </div>
-              <div className="bg-gray-50 rounded-xl p-4">
+              <div className="bg-gray-50 rounded-xl p-3 sm:p-4">
                 <p className="text-xs text-gray-500">Result Date</p>
-                <p className="font-medium text-gray-900 mt-1">{formatDate(latestSchedule.result_date) ?? 'TBA'}</p>
+                <p className="font-medium text-gray-900 mt-1 text-sm sm:text-base">{formatDate(latestSchedule.result_date) ?? 'TBA'}</p>
               </div>
             </div>
           ) : (
@@ -262,20 +284,20 @@ export default async function ExamDetailPage({
 
         {/* Eligibility */}
         {eligibility && (
-          <div className="bg-white rounded-2xl border border-gray-200 p-6 mb-8">
-            <h2 className="text-lg font-semibold text-gray-900 mb-3">Eligibility</h2>
+          <div className="bg-white rounded-2xl border border-gray-200 p-4 sm:p-6 mb-6 sm:mb-8">
+            <h2 className="text-base sm:text-lg font-semibold text-gray-900 mb-2 sm:mb-3">Eligibility</h2>
             <div className="flex flex-wrap gap-2">
               {eligibility.class_required && (
-                <span className="text-xs bg-yellow-50 text-yellow-700 px-3 py-1 rounded-full">{eligibility.class_required}</span>
+                <span className="text-xs bg-yellow-50 text-yellow-700 px-2 sm:px-3 py-1 rounded-full">{eligibility.class_required}</span>
               )}
               {eligibility.stream_required && (
-                <span className="text-xs bg-blue-50 text-blue-700 px-3 py-1 rounded-full">{eligibility.stream_required}</span>
+                <span className="text-xs bg-blue-50 text-blue-700 px-2 sm:px-3 py-1 rounded-full">{eligibility.stream_required}</span>
               )}
               {eligibility.min_percentage && (
-                <span className="text-xs bg-green-50 text-green-700 px-3 py-1 rounded-full">Min {eligibility.min_percentage}%</span>
+                <span className="text-xs bg-green-50 text-green-700 px-2 sm:px-3 py-1 rounded-full">Min {eligibility.min_percentage}%</span>
               )}
               {eligibility.age_max && (
-                <span className="text-xs bg-red-50 text-red-700 px-3 py-1 rounded-full">
+                <span className="text-xs bg-red-50 text-red-700 px-2 sm:px-3 py-1 rounded-full">
                   Age: {eligibility.age_min}-{eligibility.age_max}
                 </span>
               )}
@@ -285,19 +307,19 @@ export default async function ExamDetailPage({
 
         {/* Selection overview */}
         {hasSelectionStats && (
-          <div className="bg-white rounded-2xl border border-gray-200 p-6 mb-8">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">🎯 Selection Overview (Latest Cycle)</h2>
-            <div className="grid sm:grid-cols-3 gap-4">
-              <div className="bg-gray-50 rounded-xl p-4 text-center">
-                <p className="text-2xl font-bold text-gray-900">{latestSchedule.total_applicants.toLocaleString('en-IN')}</p>
+          <div className="bg-white rounded-2xl border border-gray-200 p-4 sm:p-6 mb-6 sm:mb-8">
+            <h2 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4">🎯 Selection Overview (Latest Cycle)</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+              <div className="bg-gray-50 rounded-xl p-3 sm:p-4 text-center">
+                <p className="text-xl sm:text-2xl font-bold text-gray-900">{latestSchedule.total_applicants.toLocaleString('en-IN')}</p>
                 <p className="text-xs text-gray-500 mt-1">Total Applicants</p>
               </div>
-              <div className="bg-gray-50 rounded-xl p-4 text-center">
-                <p className="text-2xl font-bold text-gray-900">{latestSchedule.total_selected.toLocaleString('en-IN')}</p>
+              <div className="bg-gray-50 rounded-xl p-3 sm:p-4 text-center">
+                <p className="text-xl sm:text-2xl font-bold text-gray-900">{latestSchedule.total_selected.toLocaleString('en-IN')}</p>
                 <p className="text-xs text-gray-500 mt-1">Total Selected</p>
               </div>
-              <div className="bg-indigo-50 rounded-xl p-4 text-center">
-                <p className="text-2xl font-bold text-indigo-700">{selectionRate}%</p>
+              <div className="bg-indigo-50 rounded-xl p-3 sm:p-4 text-center">
+                <p className="text-xl sm:text-2xl font-bold text-indigo-700">{selectionRate}%</p>
                 <p className="text-xs text-indigo-600 mt-1">Selection Rate</p>
               </div>
             </div>
@@ -305,38 +327,38 @@ export default async function ExamDetailPage({
         )}
 
         {exam.official_url && (
-          <div className="flex flex-wrap gap-3 mb-8">
+          <div className="flex flex-wrap gap-3 mb-6 sm:mb-8">
             <a
               href={exam.official_url}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-block bg-indigo-600 text-white font-medium px-6 py-2.5 rounded-lg hover:bg-indigo-700 transition"
+              className="inline-block bg-indigo-600 text-white font-medium px-4 sm:px-6 py-2 sm:py-2.5 rounded-lg hover:bg-indigo-700 transition text-sm sm:text-base"
             >
               Go to Official Site →
             </a>
           </div>
         )}
 
-        <div className="flex flex-wrap gap-3 mb-8">
+        <div className="flex flex-wrap gap-3 mb-6 sm:mb-8">
           <SaveExamButton examId={exam.id} />
         </div>
 
         {/* How to crack this exam — generic evergreen strategy */}
-        <div className="mb-10">
-          <h2 className="text-2xl font-bold text-gray-900 mb-1">How to Crack This Exam</h2>
-          <p className="text-gray-500 mb-6">A proven, general preparation strategy — adapt the timeline to how much time you have left</p>
+        <div className="mb-8 sm:mb-10">
+          <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-1">How to Crack This Exam</h2>
+          <p className="text-gray-500 text-sm sm:text-base mb-4 sm:mb-6">A proven, general preparation strategy — adapt the timeline to how much time you have left</p>
           <div className="relative">
             {STRATEGY_STEPS.map((step, i) => {
               const isLast = i === STRATEGY_STEPS.length - 1
               return (
-                <div key={step.title} className="relative flex gap-5 pb-8">
-                  {!isLast && <div className="absolute left-[19px] top-10 bottom-0 w-0.5 bg-indigo-200" />}
-                  <div className="relative z-10 flex items-center justify-center w-10 h-10 rounded-full text-white font-semibold shrink-0 bg-indigo-600">
+                <div key={step.title} className="relative flex gap-3 sm:gap-5 pb-6 sm:pb-8">
+                  {!isLast && <div className="absolute left-[15px] sm:left-[19px] top-8 sm:top-10 bottom-0 w-0.5 bg-indigo-200" />}
+                  <div className="relative z-10 flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 rounded-full text-white font-semibold shrink-0 bg-indigo-600 text-sm sm:text-base">
                     {i + 1}
                   </div>
-                  <div className="flex-1 bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
-                    <h3 className="font-semibold text-gray-900">{step.title}</h3>
-                    <p className="text-sm text-gray-500 mt-1">{step.description}</p>
+                  <div className="flex-1 bg-white rounded-2xl border border-gray-200 shadow-sm p-4 sm:p-5">
+                    <h3 className="font-semibold text-gray-900 text-sm sm:text-base">{step.title}</h3>
+                    <p className="text-xs sm:text-sm text-gray-500 mt-1">{step.description}</p>
                   </div>
                 </div>
               )
@@ -347,52 +369,52 @@ export default async function ExamDetailPage({
         {/* Subject-wise syllabus weightage now lives on its own page — link out
             instead of rendering it inline, to keep this page from getting bulky */}
         {syllabusCount != null && syllabusCount > 0 && (
-          <div className="mb-10">
+          <div className="mb-8 sm:mb-10">
             <Link
               href={`/exams/${slug}/roadmap`}
-              className="group flex items-center justify-between gap-4 bg-gradient-to-br from-indigo-600 to-indigo-800 text-white rounded-2xl p-6 hover:shadow-lg transition"
+              className="group flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4 bg-gradient-to-br from-indigo-600 to-indigo-800 text-white rounded-2xl p-4 sm:p-6 hover:shadow-lg transition"
             >
               <div>
-                <h2 className="text-xl font-bold">Subject-wise Weightage & Study Roadmap</h2>
-                <p className="text-indigo-100 text-sm mt-1">
+                <h2 className="text-lg sm:text-xl font-bold">Subject-wise Weightage & Study Roadmap</h2>
+                <p className="text-indigo-100 text-xs sm:text-sm mt-1">
                   See exactly where the marks come from, subject by subject, and how to sequence your revision for {exam.name}.
                 </p>
               </div>
-              <span className="text-2xl shrink-0 transition-transform group-hover:translate-x-1">→</span>
+              <span className="text-xl sm:text-2xl shrink-0 transition-transform group-hover:translate-x-1 self-start sm:self-auto">→</span>
             </Link>
           </div>
         )}
 
         {/* Toppers */}
-        <div className="bg-white rounded-2xl border border-gray-200 p-6 mb-10">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">
+        <div className="bg-white rounded-2xl border border-gray-200 p-4 sm:p-6 mb-6 sm:mb-10">
+          <h2 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4">
             🏆 Toppers {toppersYear ? `(${toppersYear})` : ''}
           </h2>
           {toppers.length > 0 ? (
             <div className="overflow-x-auto rounded-lg border border-gray-100">
-              <table className="w-full text-sm">
+              <table className="w-full text-xs sm:text-sm">
                 <thead>
                   <tr className="bg-gray-50 text-left text-gray-500">
-                    <th className="px-3 py-2 font-medium">Rank</th>
-                    <th className="px-3 py-2 font-medium">Name</th>
-                    <th className="px-3 py-2 font-medium">Score</th>
-                    <th className="px-3 py-2 font-medium">City</th>
+                    <th className="px-2 sm:px-3 py-2 font-medium">Rank</th>
+                    <th className="px-2 sm:px-3 py-2 font-medium">Name</th>
+                    <th className="px-2 sm:px-3 py-2 font-medium">Score</th>
+                    <th className="px-2 sm:px-3 py-2 font-medium">City</th>
                   </tr>
                 </thead>
                 <tbody>
                   {toppers.map((t) => (
                     <tr key={t.id} className="border-t border-gray-100">
-                      <td className="px-3 py-2 text-gray-900">{t.rank ? `#${t.rank}` : '—'}</td>
-                      <td className="px-3 py-2 text-gray-900">{t.name}</td>
-                      <td className="px-3 py-2 text-gray-600">{t.score ?? '—'}</td>
-                      <td className="px-3 py-2 text-gray-600">{t.city ?? '—'}</td>
+                      <td className="px-2 sm:px-3 py-2 text-gray-900">{t.rank ? `#${t.rank}` : '—'}</td>
+                      <td className="px-2 sm:px-3 py-2 text-gray-900">{t.name}</td>
+                      <td className="px-2 sm:px-3 py-2 text-gray-600">{t.score ?? '—'}</td>
+                      <td className="px-2 sm:px-3 py-2 text-gray-600">{t.city ?? '—'}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
           ) : (
-            <p className="text-sm text-gray-500">
+            <p className="text-xs sm:text-sm text-gray-500">
               Topper details haven&apos;t been added yet.{' '}
               {exam.official_url && (
                 <a href={exam.official_url} target="_blank" rel="noopener noreferrer" className="text-indigo-600 hover:underline">
@@ -405,39 +427,39 @@ export default async function ExamDetailPage({
 
         {/* Last N Years — pivot table, one row per institute/branch/category, one column per year */}
         {pivotRows.length > 0 && (
-          <div className="mb-10">
+          <div className="mb-8 sm:mb-10">
             <div className="flex items-center justify-between flex-wrap gap-2 mb-1">
-              <h2 className="text-2xl font-bold text-gray-900">
+              <h2 className="text-xl sm:text-2xl font-bold text-gray-900">
                 Cutoff Trend — Last {nationalYearsAsc.length} Year{nationalYearsAsc.length > 1 ? 's' : ''}
-                <span className="text-gray-400 font-normal text-lg"> ({nationalYearsAsc[0]}–{nationalYearsAsc[nationalYearsAsc.length - 1]})</span>
+                <span className="text-gray-400 font-normal text-base sm:text-lg"> ({nationalYearsAsc[0]}–{nationalYearsAsc[nationalYearsAsc.length - 1]})</span>
               </h2>
             </div>
-            <p className="text-gray-500 mb-6">Compare how cutoffs have moved year over year, side by side</p>
-            <div className="bg-white rounded-2xl border border-gray-200 p-6">
+            <p className="text-gray-500 text-sm sm:text-base mb-4 sm:mb-6">Compare how cutoffs have moved year over year, side by side</p>
+            <div className="bg-white rounded-2xl border border-gray-200 p-4 sm:p-6">
               <div className="overflow-x-auto rounded-lg border border-gray-100">
-                <table className="w-full text-sm">
+                <table className="w-full text-xs sm:text-sm">
                   <thead>
                     <tr className="bg-gray-50 text-left text-gray-500">
-                      {hasInstitute && <th className="px-3 py-2 font-medium whitespace-nowrap">Institute / Body</th>}
-                      {hasPaper && <th className="px-3 py-2 font-medium whitespace-nowrap">Branch / Paper</th>}
-                      {hasProgram && <th className="px-3 py-2 font-medium whitespace-nowrap">Program / Post</th>}
-                      {hasStage && <th className="px-3 py-2 font-medium whitespace-nowrap">Stage</th>}
-                      <th className="px-3 py-2 font-medium whitespace-nowrap">Category</th>
+                      {hasInstitute && <th className="px-2 sm:px-3 py-2 font-medium whitespace-nowrap">Institute / Body</th>}
+                      {hasPaper && <th className="px-2 sm:px-3 py-2 font-medium whitespace-nowrap">Branch / Paper</th>}
+                      {hasProgram && <th className="px-2 sm:px-3 py-2 font-medium whitespace-nowrap">Program / Post</th>}
+                      {hasStage && <th className="px-2 sm:px-3 py-2 font-medium whitespace-nowrap">Stage</th>}
+                      <th className="px-2 sm:px-3 py-2 font-medium whitespace-nowrap">Category</th>
                       {nationalYearsAsc.map((y) => (
-                        <th key={y} className="px-3 py-2 font-medium text-right whitespace-nowrap">{y}</th>
+                        <th key={y} className="px-2 sm:px-3 py-2 font-medium text-right whitespace-nowrap">{y}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
                     {pivotRows.map((pr, idx) => (
                       <tr key={idx} className="border-t border-gray-100">
-                        {hasInstitute && <td className="px-3 py-2 text-gray-900 whitespace-nowrap">{pr.label.institute ?? '—'}</td>}
-                        {hasPaper && <td className="px-3 py-2 text-gray-600 whitespace-nowrap">{pr.label.branch ?? '—'}</td>}
-                        {hasProgram && <td className="px-3 py-2 text-gray-600 whitespace-nowrap">{pr.label.program ?? '—'}</td>}
-                        {hasStage && <td className="px-3 py-2 text-gray-600 whitespace-nowrap">{pr.label.stage ?? '—'}</td>}
-                        <td className="px-3 py-2 text-gray-600 whitespace-nowrap">{pr.label.category}</td>
+                        {hasInstitute && <td className="px-2 sm:px-3 py-2 text-gray-900 whitespace-nowrap text-xs sm:text-sm">{pr.label.institute ?? '—'}</td>}
+                        {hasPaper && <td className="px-2 sm:px-3 py-2 text-gray-600 whitespace-nowrap text-xs sm:text-sm">{pr.label.branch ?? '—'}</td>}
+                        {hasProgram && <td className="px-2 sm:px-3 py-2 text-gray-600 whitespace-nowrap text-xs sm:text-sm">{pr.label.program ?? '—'}</td>}
+                        {hasStage && <td className="px-2 sm:px-3 py-2 text-gray-600 whitespace-nowrap text-xs sm:text-sm">{pr.label.stage ?? '—'}</td>}
+                        <td className="px-2 sm:px-3 py-2 text-gray-600 whitespace-nowrap text-xs sm:text-sm">{pr.label.category}</td>
                         {nationalYearsAsc.map((y) => (
-                          <td key={y} className="px-3 py-2 text-gray-900 text-right font-medium whitespace-nowrap">
+                          <td key={y} className="px-2 sm:px-3 py-2 text-gray-900 text-right font-medium whitespace-nowrap text-xs sm:text-sm">
                             {formatCutoffCell(pr.byYear.get(y))}
                           </td>
                         ))}
@@ -446,7 +468,7 @@ export default async function ExamDetailPage({
                   </tbody>
                 </table>
               </div>
-              <p className="text-xs text-gray-400 mt-3">
+              <p className="text-xs text-gray-400 mt-2 sm:mt-3">
                 Values shown as marks, percentile, or rank depending on the exam — see the detailed records below for units and sources.
               </p>
             </div>

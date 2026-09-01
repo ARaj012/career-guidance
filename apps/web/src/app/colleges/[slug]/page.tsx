@@ -8,10 +8,7 @@ import PlacementCharts from "@/components/college/PlacementCharts";
 import CutoffTrendsChart from "@/components/college/CutoffTrendsChart";
 import CollegeFaqs from "@/components/college/CollegeFaqs";
 import CollegeReviews from "@/components/college/CollegeReviews";
-import CollegeScholarships, {
-  ScholarshipDetail,
-  ScholarshipUserProfile,
-} from "@/components/college/CollegeScholarships";
+
 import {
   MapPin,
   GraduationCap,
@@ -174,23 +171,7 @@ export default async function CollegeDetailPage({
     .eq("college_id", college.id)
     .order("amount_max", { ascending: false, nullsFirst: false });
 
-  const scholarships: ScholarshipDetail[] = scholarshipsRaw ?? [];
-
-  // NEW: signed-in student's profile, used only to personalize which
-  // scholarships are flagged as a "good match" — no extra data is fabricated
-  let userProfile: ScholarshipUserProfile | null = null;
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (user) {
-    const { data: profileRaw } = await supabase
-      .from("user_profiles")
-      .select("state, stream, current_education, class_level")
-      .eq("user_id", user.id)
-      .single();
-    userProfile = profileRaw ?? null;
-  }
+  const scholarships: any[] = scholarshipsRaw ?? [];
 
   // Group courses by degree type
   const degreeGroups = courses.reduce<Record<string, any[]>>((acc, c) => {
@@ -423,14 +404,25 @@ export default async function CollegeDetailPage({
         )}
 
         {/* NEW: Scholarships & Govt Schemes for this specific college */}
-        <div className="mb-6">
-          <CollegeScholarships
-            scholarships={scholarships}
-            collegeName={college.name}
-            collegeState={college.state}
-            userProfile={userProfile}
-          />
-        </div>
+        {scholarships.length > 0 && (
+          <div className="mb-6">
+            <Link
+              href={`/colleges/${slug}/scholarships`}
+              className="group flex items-center justify-between gap-4 bg-gradient-to-br from-emerald-600 to-teal-700 text-white rounded-2xl p-4 sm:p-6 hover:shadow-lg transition"
+            >
+              <div>
+                <h2 className="text-lg sm:text-xl font-bold flex items-center gap-2">
+                  <Award className="w-5 h-5 sm:w-6 sm:h-6" />
+                  Scholarships & Schemes
+                </h2>
+                <p className="text-emerald-100 text-xs sm:text-sm mt-1">
+                  {scholarships.length} scholarship{scholarships.length > 1 ? 's' : ''} available for {college.name}
+                </p>
+              </div>
+              <span className="text-xl sm:text-2xl shrink-0 transition-transform group-hover:translate-x-1">→</span>
+            </Link>
+          </div>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Courses */}
