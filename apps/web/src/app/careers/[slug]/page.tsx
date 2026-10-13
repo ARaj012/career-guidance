@@ -2,6 +2,7 @@
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
+import { Metadata } from 'next'
 import SaveCareerButton from '@/components/SaveCareerButton'
 import {
   ArrowLeft, TrendingUp, IndianRupee, Briefcase, BookOpen,
@@ -195,11 +196,59 @@ function formatFees(min: number | null, max: number | null): string {
 
 // ── Metadata ───────────────────────────────────────────────────────────────
 
-export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params
   const supabase = await createServerSupabaseClient()
-  const { data } = await supabase.from('careers').select('title').eq('slug', slug).single()
-  return { title: data?.title ? `${data.title} Career Guide | CareerGuide` : 'Career | CareerGuide' }
+  
+  // Try the slug as-is first
+  let { data: career } = await supabase
+    .from('careers')
+    .select('title, description, category, avg_salary_min, avg_salary_max, growth_level, demand_score')
+    .eq('slug', slug)
+    .maybeSingle()
+
+  // If not found, try replacing underscores with hyphens
+  if (!career && slug.includes('_')) {
+    const altSlug = slug.replace(/_/g, '-')
+    const { data: altCareer } = await supabase
+      .from('careers')
+      .select('title, description, category, avg_salary_min, avg_salary_max, growth_level, demand_score')
+      .eq('slug', altSlug)
+      .maybeSingle()
+    if (altCareer) career = altCareer
+  }
+
+  if (!career) {
+    return {
+      title: 'Career Not Found | CareerGuide',
+      description: 'The career you are looking for does not exist.',
+    }
+  }
+
+  const salaryText = formatSalary(career.avg_salary_min, career.avg_salary_max)
+  const description = career.description?.slice(0, 160) || `Explore ${career.title} career: ${salaryText}, ${career.growth_level} growth, ${career.demand_score}/100 demand. Skills, colleges, exams, and career roadmap.`
+
+  return {
+    title: `${career.title} Career Guide 2026 | CareerGuide`,
+    description,
+    keywords: `${career.title}, career guidance, ${career.category}, ${salaryText}, ${career.growth_level} growth, career options, Indian students`,
+    openGraph: {
+      type: 'article',
+      locale: 'en_IN',
+      url: `https://careerguide.com/careers/${slug}`,
+      title: `${career.title} Career Guide - ${salaryText}, ${career.growth_level} Growth`,
+      description,
+      siteName: 'CareerGuide',
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: `${career.title} Career Guide | CareerGuide`,
+      description,
+    },
+    alternates: {
+      canonical: `https://careerguide.com/careers/${slug}`,
+    },
+  }
 }
 
 // ── Page ───────────────────────────────────────────────────────────────────
@@ -208,11 +257,23 @@ export default async function CareerDetailPage({ params }: { params: Promise<{ s
   const { slug } = await params
   const supabase = await createServerSupabaseClient()
 
-  const { data: careerRaw } = await supabase
+  // Try the slug as-is first
+  let { data: careerRaw } = await supabase
     .from('careers')
     .select('id, title, slug, description, category, avg_salary_min, avg_salary_max, salary_currency, growth_level, competition_level, work_life_balance, demand_score, is_trending, created_at')
     .eq('slug', slug)
-    .single()
+    .maybeSingle()
+
+  // If not found, try replacing underscores with hyphens
+  if (!careerRaw && slug.includes('_')) {
+    const altSlug = slug.replace(/_/g, '-')
+    const { data: altCareerRaw } = await supabase
+      .from('careers')
+      .select('id, title, slug, description, category, avg_salary_min, avg_salary_max, salary_currency, growth_level, competition_level, work_life_balance, demand_score, is_trending, created_at')
+      .eq('slug', altSlug)
+      .maybeSingle()
+    if (altCareerRaw) careerRaw = altCareerRaw
+  }
 
   if (!careerRaw) notFound()
   const career = careerRaw as any

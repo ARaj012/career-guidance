@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useState, useEffect } from 'react'
-import { Menu, X, GraduationCap, LogOut, User as UserIcon } from 'lucide-react'
+import { Menu, X, GraduationCap, LogOut, User as UserIcon, Bell, Target } from 'lucide-react'
 import { createClient } from '@/lib/supabase'
 import type { User } from '@supabase/supabase-js'
 
@@ -25,6 +25,7 @@ export default function Navbar() {
   const [loading, setLoading] = useState(true)
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const [isAdmin, setIsAdmin] = useState(false)
+  const [unreadCount, setUnreadCount] = useState(0)
 
   const supabase = createClient()
 
@@ -34,13 +35,25 @@ export default function Navbar() {
       setUser(data.user)
       setLoading(false)
       if (data.user) {
-        fetch('/api/admin/me').then((r) => r.json()).then((json) => setIsAdmin(Boolean(json.admin)))
+        // Fetch unread notification count
+        fetch('/api/notifications?unreadOnly=true&limit=1')
+          .then(r => r.json())
+          .then(data => setUnreadCount(data.unreadCount || 0))
+          .catch(() => setUnreadCount(0))
       }
     })
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null)
+      if (session?.user) {
+        fetch('/api/notifications?unreadOnly=true&limit=1')
+          .then(r => r.json())
+          .then(data => setUnreadCount(data.unreadCount || 0))
+          .catch(() => setUnreadCount(0))
+      } else {
+        setUnreadCount(0)
+      }
     })
 
     return () => subscription.unsubscribe()
@@ -67,8 +80,8 @@ export default function Navbar() {
         <div className="flex items-center justify-between h-16">
 
           {/* Logo */}
-          <Link href="/" className="flex items-center gap-2 flex-shrink-0">
-            <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center">
+          <Link href="/" className="flex items-center gap-2 flex-shrink-0" aria-label="CareerGuide Home">
+            <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center" aria-hidden="true">
               <GraduationCap className="w-5 h-5 text-white" />
             </div>
             <span className="text-xl font-bold text-gray-900">
@@ -98,31 +111,52 @@ export default function Navbar() {
             {loading ? (
               <div className="w-8 h-8 bg-gray-100 rounded-full animate-pulse" />
             ) : user ? (
-              <div className="relative">
-                <button
-                  onClick={() => setDropdownOpen(!dropdownOpen)}
-                  className="flex items-center gap-2 p-1.5 rounded-lg hover:bg-gray-50 transition-colors"
+              <>
+                {/* Notification Bell */}
+                <Link
+                  href="/notifications"
+                  className="relative p-2 rounded-lg hover:bg-gray-50 transition-colors"
                 >
-                  {avatarUrl ? (
-                    <img
-                      src={avatarUrl}
-                      alt="avatar"
-                      className="w-8 h-8 rounded-full object-cover border-2 border-indigo-200"
-                    />
-                  ) : (
-                    <div className="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center">
-                      <span className="text-white text-sm font-semibold">
-                        {firstName.charAt(0).toUpperCase()}
-                      </span>
-                    </div>
+                  <Bell className="w-5 h-5 text-gray-600" />
+                  {unreadCount > 0 && (
+                    <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full" />
                   )}
-                  <span className="text-sm font-medium text-gray-700 max-w-[120px] truncate">
-                    {firstName}
-                  </span>
-                  <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-                  </svg>
-                </button>
+                </Link>
+
+                {/* My Exams Link */}
+                <Link
+                  href="/my-exams"
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium text-gray-600 hover:text-indigo-600 hover:bg-gray-50 transition-colors"
+                >
+                  <Target className="w-4 h-4" />
+                  My Exams
+                </Link>
+
+                <div className="relative">
+                  <button
+                    onClick={() => setDropdownOpen(!dropdownOpen)}
+                    className="flex items-center gap-2 p-1.5 rounded-lg hover:bg-gray-50 transition-colors"
+                  >
+                    {avatarUrl ? (
+                      <img
+                        src={avatarUrl}
+                        alt="avatar"
+                        className="w-8 h-8 rounded-full object-cover border-2 border-indigo-200"
+                      />
+                    ) : (
+                      <div className="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center">
+                        <span className="text-white text-sm font-semibold">
+                          {firstName.charAt(0).toUpperCase()}
+                        </span>
+                      </div>
+                    )}
+                    <span className="text-sm font-medium text-gray-700 max-w-[120px] truncate">
+                      {firstName}
+                    </span>
+                    <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
 
                 {/* Dropdown */}
                 {dropdownOpen && (
@@ -172,6 +206,7 @@ export default function Navbar() {
                   </div>
                 )}
               </div>
+            </>
             ) : (
               <>
                 <Link
@@ -240,6 +275,17 @@ export default function Navbar() {
                 <Link href="/dashboard" onClick={() => setMenuOpen(false)}
                   className="block px-4 py-2.5 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50">
                   Dashboard
+                </Link>
+                <Link href="/my-exams" onClick={() => setMenuOpen(false)}
+                  className="block px-4 py-2.5 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 flex items-center gap-2">
+                  <Target className="w-4 h-4" /> My Exams
+                </Link>
+                <Link href="/notifications" onClick={() => setMenuOpen(false)}
+                  className="block px-4 py-2.5 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 flex items-center gap-2">
+                  <Bell className="w-4 h-4" /> Notifications
+                  {unreadCount > 0 && (
+                    <span className="bg-red-500 text-white text-xs px-2 py-0.5 rounded-full">{unreadCount}</span>
+                  )}
                 </Link>
                 <Link href="/subscription" onClick={() => setMenuOpen(false)}
                   className="block px-4 py-2.5 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50">

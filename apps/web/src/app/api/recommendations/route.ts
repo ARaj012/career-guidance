@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 
+// Cache recommendations for 1 hour
+export const revalidate = 3600
+
 interface CareerWeight {
   weight: number
   subject_id: string
@@ -36,7 +39,33 @@ interface CareerEntry {
 export async function POST(req: NextRequest) {
   try {
     const supabase = await createServerSupabaseClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    
+    if (!user) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
+    }
+
     const { subjects } = await req.json() as { subjects: SubjectInput[] }
+
+    if (!Array.isArray(subjects) || subjects.length === 0) {
+      return NextResponse.json({ error: 'subjects array is required' }, { status: 400 })
+    }
+
+    if (subjects.length > 20) {
+      return NextResponse.json({ error: 'Too many subjects provided (max 20)' }, { status: 400 })
+    }
+
+    for (const subject of subjects) {
+      if (!subject.subject_id || typeof subject.subject_id !== 'string') {
+        return NextResponse.json({ error: 'Invalid subject_id' }, { status: 400 })
+      }
+      if (typeof subject.score !== 'number' || subject.score < 0 || subject.score > 100) {
+        return NextResponse.json({ error: 'Invalid score (must be 0-100)' }, { status: 400 })
+      }
+      if (typeof subject.interest !== 'number' || subject.interest < 1 || subject.interest > 5) {
+        return NextResponse.json({ error: 'Invalid interest (must be 1-5)' }, { status: 400 })
+      }
+    }
 
     const { data: weights, error } = await supabase
       .from('career_subject_weights')

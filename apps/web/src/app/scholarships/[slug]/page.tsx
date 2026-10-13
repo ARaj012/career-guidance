@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
+import { Metadata } from 'next'
 import { GraduationCap, MapPin, ExternalLink, FileText, User, CheckCircle2, ListOrdered } from 'lucide-react'
 
 interface Scholarship {
@@ -23,6 +24,76 @@ interface Scholarship {
   country: string
   state: string | null
   is_active: boolean
+}
+
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  const { slug } = await params
+  const supabase = await createServerSupabaseClient()
+  
+  // Try the slug as-is first
+  let { data: scholarship } = await supabase
+    .from('scholarships')
+    .select('name, description, provider, amount_min, amount_max, amount_type, application_deadline, category, level, state, country')
+    .eq('slug', slug)
+    .maybeSingle()
+
+  // If not found, try replacing underscores with hyphens
+  if (!scholarship && slug.includes('_')) {
+    const altSlug = slug.replace(/_/g, '-')
+    const { data: altScholarship } = await supabase
+      .from('scholarships')
+      .select('name, description, provider, amount_min, amount_max, amount_type, application_deadline, category, level, state, country')
+      .eq('slug', altSlug)
+      .maybeSingle()
+    if (altScholarship) scholarship = altScholarship
+  }
+
+  if (!scholarship) {
+    return {
+      title: 'Scholarship Not Found | CareerGuide',
+      description: 'The scholarship you are looking for does not exist.',
+    }
+  }
+
+  const formatAmount = (min: number | null, max: number | null, type: string) => {
+    if (type === 'full_tuition') return 'Full Tuition'
+    if (type === 'partial_tuition') return 'Partial Tuition'
+    if (type === 'fixed_amount') {
+      if (min && max && min !== max) return `₹${min.toLocaleString()} - ₹${max.toLocaleString()}`
+      if (min) return `₹${min.toLocaleString()}`
+      if (max) return `₹${max.toLocaleString()}`
+    }
+    return 'Amount varies'
+  }
+
+  const amountText = formatAmount(scholarship.amount_min, scholarship.amount_max, scholarship.amount_type)
+  const deadline = scholarship.application_deadline ? new Date(scholarship.application_deadline).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Rolling deadline'
+  const location = scholarship.state ? `${scholarship.state}, India` : scholarship.country
+  const levelText = scholarship.level === 'all' ? 'All Levels' : scholarship.level
+
+  const description = `${scholarship.name}: ${amountText} by ${scholarship.provider}. ${levelText} students. Deadline: ${deadline}. ${scholarship.description?.slice(0, 120) || ''}. Eligibility, documents, and application details.`
+
+  return {
+    title: `${scholarship.name} - ${amountText} | CareerGuide`,
+    description,
+    keywords: `${scholarship.name}, ${scholarship.provider}, ${amountText}, ${levelText} scholarship, ${location}, ${deadline}, financial aid, education funding`,
+    openGraph: {
+      type: 'article',
+      locale: 'en_IN',
+      url: `https://careerguide.com/scholarships/${slug}`,
+      title: `${scholarship.name} - ${amountText}`,
+      description,
+      siteName: 'CareerGuide',
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: `${scholarship.name} | CareerGuide`,
+      description,
+    },
+    alternates: {
+      canonical: `https://careerguide.com/scholarships/${slug}`,
+    },
+  }
 }
 
 export default async function ScholarshipDetailPage({

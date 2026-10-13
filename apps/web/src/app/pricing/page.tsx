@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase'
+import { useRouter } from 'next/navigation'
 import { Check, X, Sparkles, Crown, Zap, Star, ArrowRight, Loader2 } from 'lucide-react'
 import Link from 'next/link'
 
@@ -22,18 +23,101 @@ export default function PricingPage() {
   const [loading, setLoading] = useState(true)
   const [user, setUser] = useState<any>(null)
   const [currentPlan, setCurrentPlan] = useState<string | null>(null)
+  const router = useRouter()
   const supabase = createClient()
 
   useEffect(() => {
     async function loadData() {
       // Load subscription plans
-      const { data: plansData } = await supabase
+      const { data: plansData, error: plansError } = await supabase
         .from('subscription_plans')
         .select('*')
         .eq('is_active', true)
         .order('display_order')
       
-      setPlans(plansData || [])
+      if (plansError) {
+        console.error('Failed to load plans:', plansError)
+        // Set default plans if database doesn't have them
+        setPlans([
+          {
+            id: 'free',
+            name: 'Free',
+            description: 'Basic features to get started',
+            price_monthly: 0,
+            price_yearly: 0,
+            currency: 'INR',
+            features: {
+              career_browsing: true,
+              college_info: true,
+              exam_info: true,
+              ai_chat_messages: 5,
+              recommendations: false,
+              scholarships: true,
+              roadmaps: false,
+              career_comparison: false,
+              college_comparison: false,
+              save_items: 10,
+              priority_support: false,
+              career_assessment: false,
+              mentorship: false,
+              advanced_analytics: false,
+            },
+            display_order: 1,
+          },
+          {
+            id: 'premium',
+            name: 'Premium',
+            description: 'For serious students',
+            price_monthly: 299,
+            price_yearly: 2499,
+            currency: 'INR',
+            features: {
+              career_browsing: true,
+              college_info: true,
+              exam_info: true,
+              ai_chat_messages: 50,
+              recommendations: true,
+              scholarships: true,
+              roadmaps: true,
+              career_comparison: true,
+              college_comparison: true,
+              save_items: 50,
+              priority_support: true,
+              career_assessment: true,
+              mentorship: false,
+              advanced_analytics: false,
+            },
+            display_order: 2,
+          },
+          {
+            id: 'pro',
+            name: 'Pro',
+            description: 'For career-focused students',
+            price_monthly: 599,
+            price_yearly: 4999,
+            currency: 'INR',
+            features: {
+              career_browsing: true,
+              college_info: true,
+              exam_info: true,
+              ai_chat_messages: 'unlimited',
+              recommendations: true,
+              scholarships: true,
+              roadmaps: true,
+              career_comparison: true,
+              college_comparison: true,
+              save_items: 'unlimited',
+              priority_support: true,
+              career_assessment: true,
+              mentorship: true,
+              advanced_analytics: true,
+            },
+            display_order: 3,
+          },
+        ])
+      } else {
+        setPlans(plansData || [])
+      }
 
       // Load user data
       const { data: { user } } = await supabase.auth.getUser()
@@ -61,7 +145,7 @@ export default function PricingPage() {
       setLoading(false)
     }
     loadData()
-  }, [supabase])
+  }, [supabase, router])
 
   const getIcon = (planId: string) => {
     switch (planId) {
@@ -122,6 +206,10 @@ export default function PricingPage() {
       if (!error) {
         setCurrentPlan('free')
         alert('Successfully downgraded to Free plan')
+        // Refresh the page to update subscription status
+        router.refresh()
+      } else {
+        alert('Failed to update subscription. Please try again.')
       }
       return
     }
@@ -140,7 +228,12 @@ export default function PricingPage() {
       const data = await res.json()
 
       if (!res.ok) {
-        alert('Failed to create payment order. Please try again.')
+        if (data.error === 'Authentication required') {
+          alert('Please log in to subscribe to a plan.')
+          window.location.href = '/login'
+          return
+        }
+        alert(data.error || 'Failed to create payment order. Please try again.')
         return
       }
 
@@ -174,12 +267,15 @@ export default function PricingPage() {
 
           const verifyData = await verifyRes.json()
 
+          console.log('🧪 Verification response:', verifyData)
+
           if (verifyData.success) {
-            setCurrentPlan(planId)
             alert('✅ Mock payment successful! Your subscription is now active.')
-            window.location.href = '/subscription'
+            // Force reload the page to fetch updated subscription
+            window.location.reload()
           } else {
-            alert('❌ Mock payment verification failed. Please check console for details.')
+            console.error('❌ Verification failed:', verifyData)
+            alert(`❌ Mock payment verification failed: ${verifyData.error || 'Unknown error'}`)
           }
         }
         return
@@ -208,9 +304,9 @@ export default function PricingPage() {
           const verifyData = await verifyRes.json()
 
           if (verifyData.success) {
-            setCurrentPlan(planId)
             alert('Payment successful! Your subscription is now active.')
-            window.location.href = '/subscription'
+            // Force reload the page to fetch updated subscription
+            window.location.reload()
           } else {
             alert('Payment verification failed. Please contact support.')
           }

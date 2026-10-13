@@ -2,6 +2,7 @@
 import { createServerSupabaseClient } from "@/lib/supabase-server";
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import { Metadata } from "next";
 import SaveCollegeButton from "@/components/SaveCollegeButton";
 import EnrollmentChart from "@/components/college/EnrollmentChart";
 import PlacementCharts from "@/components/college/PlacementCharts";
@@ -77,16 +78,62 @@ export async function generateMetadata({
   params,
 }: {
   params: Promise<{ slug: string }>;
-}) {
+}): Promise<Metadata> {
   const { slug } = await params;
   const supabase = await createServerSupabaseClient();
-  const { data } = await supabase
+  
+  // Try the slug as-is first
+  let { data: college } = await supabase
     .from("colleges")
-    .select("name")
+    .select("name, type, state, city, nirf_rank, naac_grade, annual_fees_min, annual_fees_max, total_students, established_year")
     .eq("slug", slug)
-    .single();
+    .maybeSingle();
+
+  // If not found, try replacing underscores with hyphens
+  if (!college && slug.includes('_')) {
+    const altSlug = slug.replace(/_/g, '-');
+    const { data: altCollege } = await supabase
+      .from("colleges")
+      .select("name, type, state, city, nirf_rank, naac_grade, annual_fees_min, annual_fees_max, total_students, established_year")
+      .eq("slug", altSlug)
+      .maybeSingle();
+    if (altCollege) college = altCollege;
+  }
+
+  if (!college) {
+    return {
+      title: "College Not Found | CareerGuide",
+      description: "The college you are looking for does not exist.",
+    };
+  }
+
+  const feesText = formatFees(college.annual_fees_min, college.annual_fees_max);
+  const rankText = college.nirf_rank ? `NIRF Rank #${college.nirf_rank}` : "NIRF Ranking N/A";
+  const gradeText = college.naac_grade ? `NAAC Grade ${college.naac_grade}` : "";
+  const studentsText = college.total_students ? `${(college.total_students / 1000).toFixed(0)}K+ students` : "";
+
+  const description = `${college.name}: ${rankText}, ${gradeText}, ${feesText}, ${studentsText}. Located in ${college.city}, ${college.state}. Established ${college.established_year}. Courses, placements, cutoffs, and admissions.`;
+
   return {
-    title: data?.name ? `${data.name} | CareerGuide` : "College | CareerGuide",
+    title: `${college.name} - Rankings, Fees, Courses & Admissions 2026 | CareerGuide`,
+    description,
+    keywords: `${college.name}, ${college.type} college, ${college.city} ${college.state}, ${rankText}, ${feesText}, ${college.naac_grade}, college admissions, NIRF ranking`,
+    openGraph: {
+      type: "article",
+      locale: "en_IN",
+      url: `https://careerguide.com/colleges/${slug}`,
+      title: `${college.name} - ${rankText}, ${feesText}`,
+      description,
+      siteName: "CareerGuide",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: `${college.name} | CareerGuide`,
+      description,
+    },
+    alternates: {
+      canonical: `https://careerguide.com/colleges/${slug}`,
+    },
   };
 }
 

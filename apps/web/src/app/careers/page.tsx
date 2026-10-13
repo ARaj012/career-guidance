@@ -7,6 +7,7 @@ import {
   Search, Filter, TrendingUp, IndianRupee, BarChart3,
   ChevronDown, X, Flame, Star, Briefcase, Check, GitCompare,
 } from 'lucide-react'
+import { ListSkeleton } from '@/components/LoadingSkeleton'
 
 interface Career {
   id: string
@@ -141,10 +142,11 @@ export default function CareersPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4" />
-          <p className="text-gray-500">Loading careers...</p>
+      <div className="min-h-screen bg-gray-50 p-4 sm:p-6 lg:p-8">
+        <div className="max-w-7xl mx-auto">
+          <div className="h-8 w-1/3 bg-gray-200 rounded animate-pulse mb-6" />
+          <div className="h-4 w-1/2 bg-gray-200 rounded animate-pulse mb-8" />
+          <ListSkeleton count={8} />
         </div>
       </div>
     )

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase'
+import { createServerSupabaseClient } from '@/lib/supabase-server'
 import crypto from 'crypto'
 
 // @ts-ignore - Razorpay types are not perfect
@@ -25,34 +25,36 @@ export async function POST(req: NextRequest) {
     const body = await req.json()
     const { razorpayOrderId, razorpayPaymentId, razorpaySignature, planId: clientPlanId, billingCycle: clientBillingCycle } = body
 
+    if (!razorpayOrderId || typeof razorpayOrderId !== 'string') {
+      return NextResponse.json({ error: 'Invalid razorpayOrderId' }, { status: 400 })
+    }
+
+    if (!razorpayPaymentId || typeof razorpayPaymentId !== 'string') {
+      return NextResponse.json({ error: 'Invalid razorpayPaymentId' }, { status: 400 })
+    }
+
+    if (!razorpaySignature || typeof razorpaySignature !== 'string') {
+      return NextResponse.json({ error: 'Invalid razorpaySignature' }, { status: 400 })
+    }
+
+    if (clientPlanId && typeof clientPlanId !== 'string') {
+      return NextResponse.json({ error: 'Invalid planId' }, { status: 400 })
+    }
+
+    if (clientBillingCycle && !['monthly', 'yearly'].includes(clientBillingCycle)) {
+      return NextResponse.json({ error: 'Invalid billingCycle' }, { status: 400 })
+    }
+
     // Mock mode for testing without real Razorpay
     if (MOCK_MODE) {
       console.log('🧪 MOCK MODE: Verifying payment for order:', razorpayOrderId)
 
-      const supabase = createClient()
-      const authHeader = req.headers.get('authorization')
-      let user = null
+      const supabase = await createServerSupabaseClient()
+      const { data: { user } } = await supabase.auth.getUser()
 
-      // Try to get user from auth header or cookie
-      if (authHeader) {
-        const { data: { user: authUser } } = await supabase.auth.getUser(authHeader.replace('Bearer ', ''))
-        user = authUser
-      } else {
-        // Try to get user from session cookie
-        const { data: { user: sessionUser } } = await supabase.auth.getUser()
-        user = sessionUser
-      }
-
-      // For mock mode, allow payment even without perfect auth for testing
+      // For mock mode, require authentication in all environments
       if (!user) {
-        console.log('🧪 MOCK MODE: No user authenticated, but allowing for testing')
-        // Create a valid mock UUID for testing (only in development)
-        if (process.env.NODE_ENV === 'development') {
-          user = { id: '00000000-0000-0000-0000-000000000000' }
-        } else {
-          // In production, require authentication even for mock mode
-          return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
-        }
+        return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
       }
 
       // Extract plan info from client request or database
@@ -123,31 +125,76 @@ export async function POST(req: NextRequest) {
         console.log('Continuing with mock payment verification despite database failure')
       }
 
-      // Try to create or update subscription (but don't fail if it doesn't work)
+      // Try to create or update subscription (CRITICAL - this must work)
       try {
-        const { error: subscriptionError } = await supabase
+        // First try to update existing subscription
+        const { data: existingSub, error: checkError } = await supabase
           .from('user_subscriptions')
-          .upsert({
-            user_id: user.id,
-            plan_id: planId,
-            status: 'active',
-            current_period_start: startDate.toISOString(),
-            current_period_end: endDate.toISOString(),
-            billing_cycle: billingCycle,
-            updated_at: new Date().toISOString()
-          }, {
-            onConflict: 'user_id'
-          })
+          .select('id')
+          .eq('user_id', user.id)
+          .single()
 
-        if (subscriptionError) {
-          console.error('Mock subscription creation error:', subscriptionError)
-          console.log('Continuing with mock payment verification despite subscription error')
+        let result
+        if (existingSub) {
+          // Update existing subscription
+          const { data: updateData, error: updateError } = await supabase
+            .from('user_subscriptions')
+            .update({
+              plan_id: planId,
+              status: 'active',
+              current_period_start: startDate.toISOString(),
+              current_period_end: endDate.toISOString(),
+              billing_cycle: billingCycle,
+              cancel_at_period_end: false,
+              updated_at: new Date().toISOString()
+            })
+            .eq('user_id', user.id)
+            .select()
+            .single()
+
+          if (updateError) {
+            console.error('❌ Subscription update error:', updateError)
+            return NextResponse.json({ 
+              error: 'Failed to update subscription', 
+              details: updateError.message 
+            }, { status: 500 })
+          }
+          result = updateData
+          console.log('✅ Subscription updated successfully:', result)
         } else {
-          console.log('Mock subscription created successfully')
+          // Create new subscription
+          const { data: insertData, error: insertError } = await supabase
+            .from('user_subscriptions')
+            .insert({
+              user_id: user.id,
+              plan_id: planId,
+              status: 'active',
+              current_period_start: startDate.toISOString(),
+              current_period_end: endDate.toISOString(),
+              billing_cycle: billingCycle,
+              cancel_at_period_end: false,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            })
+            .select()
+            .single()
+
+          if (insertError) {
+            console.error('❌ Subscription creation error:', insertError)
+            return NextResponse.json({ 
+              error: 'Failed to create subscription', 
+              details: insertError.message 
+            }, { status: 500 })
+          }
+          result = insertData
+          console.log('✅ Subscription created successfully:', result)
         }
       } catch (dbError) {
-        console.error('Database operation failed:', dbError)
-        console.log('Continuing with mock payment verification despite database failure')
+        console.error('❌ Database operation failed:', dbError)
+        return NextResponse.json({ 
+          error: 'Database operation failed', 
+          details: String(dbError) 
+        }, { status: 500 })
       }
 
       return NextResponse.json({
@@ -182,11 +229,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Payment not captured' }, { status: 400 })
     }
 
-    const supabase = createClient()
+    const supabase = await createServerSupabaseClient()
     const { data: { user } } = await supabase.auth.getUser()
 
     if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
 
     // Update payment history

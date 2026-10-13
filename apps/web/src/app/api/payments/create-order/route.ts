@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase'
+import { createServerSupabaseClient } from '@/lib/supabase-server'
 
 // @ts-ignore - Razorpay types are not perfect
 const Razorpay = require('razorpay')
@@ -24,6 +24,14 @@ export async function POST(req: NextRequest) {
     const body = await req.json()
     const { planId, billingCycle } = body
 
+    if (!planId || typeof planId !== 'string') {
+      return NextResponse.json({ error: 'Invalid planId' }, { status: 400 })
+    }
+
+    if (!billingCycle || !['monthly', 'yearly'].includes(billingCycle)) {
+      return NextResponse.json({ error: 'Invalid billingCycle (must be monthly or yearly)' }, { status: 400 })
+    }
+
     // Mock mode for testing without real Razorpay
     if (MOCK_MODE) {
       console.log('🧪 MOCK MODE: Creating order for plan:', planId, 'billing:', billingCycle)
@@ -41,30 +49,12 @@ export async function POST(req: NextRequest) {
       const mockOrderId = `order_mock_${Date.now()}`
 
       // Store mock order in database
-      const supabase = createClient()
-      const authHeader = req.headers.get('authorization')
-      let user = null
+      const supabase = await createServerSupabaseClient()
+      const { data: { user } } = await supabase.auth.getUser()
 
-      // Try to get user from auth header or cookie
-      if (authHeader) {
-        const { data: { user: authUser } } = await supabase.auth.getUser(authHeader.replace('Bearer ', ''))
-        user = authUser
-      } else {
-        // Try to get user from session cookie
-        const { data: { user: sessionUser } } = await supabase.auth.getUser()
-        user = sessionUser
-      }
-
-      // For mock mode, allow payment even without perfect auth for testing
+      // For mock mode, require authentication in all environments
       if (!user) {
-        console.log('🧪 MOCK MODE: No user authenticated, but allowing for testing')
-        // Create a valid mock UUID for testing (only in development)
-        if (process.env.NODE_ENV === 'development') {
-          user = { id: '00000000-0000-0000-0000-000000000000' }
-        } else {
-          // In production, require authentication even for mock mode
-          return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
-        }
+        return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
       }
 
       // Try to store mock order in database (but don't fail if it doesn't work)
@@ -118,7 +108,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Get plan details
-    const supabase = createClient()
+    const supabase = await createServerSupabaseClient()
     const { data: plan } = await supabase
       .from('subscription_plans')
       .select('*')
@@ -132,7 +122,7 @@ export async function POST(req: NextRequest) {
     // Get user
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
 
     // Calculate amount based on billing cycle
@@ -160,7 +150,7 @@ export async function POST(req: NextRequest) {
     await supabase.from('payment_history').insert({
       user_id: user.id,
       amount: amount / 100, // Convert back to rupees
-      currency: plan.currency,
+      currency: plan.currency || 'INR',
       status: 'pending',
       payment_method: 'razorpay',
       razorpay_order_id: order.id,

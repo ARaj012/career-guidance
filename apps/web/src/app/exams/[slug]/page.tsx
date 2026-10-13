@@ -2,7 +2,8 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
-import SaveExamButton from '@/components/SaveExamButton'
+import { Metadata } from 'next'
+import TrackExamButton from '@/components/TrackExamButton'
 
 const STRATEGY_STEPS = [
   {
@@ -37,6 +38,16 @@ function formatDate(d: string | null) {
   return new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
 }
 
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  const { slug } = await params
+  
+  // Simple fallback title
+  return {
+    title: 'UPSC CSE 2026 - Dates, Syllabus, Cutoff & Preparation | CareerGuide',
+    description: 'UPSC Civil Services Examination: Union Public Service Commission, National level, Offline mode. Annual exam. Eligibility, syllabus, cutoffs, and preparation tips.',
+  }
+}
+
 export default async function ExamDetailPage({
   params,
 }: {
@@ -45,7 +56,8 @@ export default async function ExamDetailPage({
   const { slug } = await params
   const supabase = await createServerSupabaseClient()
 
-  const { data: exam, error: examError } = await supabase
+  // Try the slug as-is first
+  let { data: exam, error: examError } = await supabase
     .from('exams')
     .select(
       `
@@ -56,6 +68,29 @@ export default async function ExamDetailPage({
     )
     .eq('slug', slug)
     .maybeSingle()
+
+  // If not found, try replacing underscores with hyphens
+  if (!exam && slug.includes('_')) {
+    const altSlug = slug.replace(/_/g, '-')
+    const { data: altExam, error: altError } = await supabase
+      .from('exams')
+      .select(
+        `
+        *,
+        exam_schedules ( registration_start, registration_end, exam_date_start, result_date, year, total_applicants, total_selected ),
+        exam_eligibility ( min_percentage, class_required, stream_required, age_min, age_max )
+      `
+      )
+      .eq('slug', altSlug)
+      .maybeSingle()
+    if (altExam) {
+      exam = altExam
+      examError = altError
+    }
+  }
+
+  if (!exam) notFound()
+  const examData = exam as any
 
   if (examError) {
     console.error('Failed to load exam:', {
@@ -115,19 +150,51 @@ export default async function ExamDetailPage({
     .limit(2000)
 
   const nationalCutoffs = (nationalCutoffRows ?? []) as any[]
+
+  // Fill in missing data based on context
+  const enrichedCutoffs = nationalCutoffs.map((row) => {
+    const enriched = { ...row }
+
+    // If institute_name is missing, use the exam's conducting body
+    if (!enriched.institute_name && exam.conducting_body) {
+      enriched.institute_name = exam.conducting_body
+    }
+
+    // If program_or_post is missing but we have exam info, derive it
+    if (!enriched.program_or_post) {
+      // For service exams, use the exam name or conducting body as program
+      if (exam.exam_level === 'National' || exam.exam_level === 'State') {
+        enriched.program_or_post = exam.name
+      }
+    }
+
+    // If stage is missing, try to infer from context or use a default
+    if (!enriched.stage) {
+      // Check if category or other fields indicate stage
+      if (row.category && (row.category.includes('Prelim') || row.category.includes('Mains') || row.category.includes('Final'))) {
+        // Stage might be in the category name
+        if (row.category.includes('Prelim')) enriched.stage = 'Prelims'
+        else if (row.category.includes('Mains')) enriched.stage = 'Mains'
+        else if (row.category.includes('Final')) enriched.stage = 'Final'
+      }
+    }
+
+    return enriched
+  })
+
   const nationalByYear = new Map<number, any[]>()
-  for (const row of nationalCutoffs) {
+  for (const row of enrichedCutoffs) {
     if (!nationalByYear.has(row.year)) nationalByYear.set(row.year, [])
     nationalByYear.get(row.year)!.push(row)
   }
   const nationalYears = Array.from(nationalByYear.keys()).sort((a, b) => b - a)
   const nationalYearsAsc = [...nationalYears].sort((a, b) => a - b)
 
-  const hasInstitute = nationalCutoffs.some((r) => r.institute_name)
-  const hasProgram = nationalCutoffs.some((r) => r.program_or_post)
-  const hasPaper = nationalCutoffs.some((r) => r.paper_or_branch)
-  const hasSection = nationalCutoffs.some((r) => r.section)
-  const hasStage = nationalCutoffs.some((r) => r.stage)
+  const hasInstitute = enrichedCutoffs.some((r) => r.institute_name)
+  const hasProgram = enrichedCutoffs.some((r) => r.program_or_post)
+  const hasPaper = enrichedCutoffs.some((r) => r.paper_or_branch)
+  const hasSection = enrichedCutoffs.some((r) => r.section)
+  const hasStage = enrichedCutoffs.some((r) => r.stage)
 
   // Build a "Last N Years" pivot: one row per unique
   // institute/branch/program/category/stage combo, one column per year.
@@ -135,20 +202,20 @@ export default async function ExamDetailPage({
   // the per-year blocks further down are for full record-level detail.
   function pivotKey(row: any) {
     return [row.institute_name, row.paper_or_branch, row.program_or_post, row.stage, row.category ?? 'Common']
-      .filter(Boolean)
+      .filter((v) => v !== null && v !== undefined && v !== '')
       .join(' • ')
   }
   function pivotLabel(row: any) {
     return {
-      institute: row.institute_name ?? null,
-      branch: row.paper_or_branch ?? null,
-      program: row.program_or_post ?? null,
-      stage: row.stage ?? null,
-      category: row.category ?? 'Common (all categories)',
+      institute: row.institute_name || '',
+      branch: row.paper_or_branch || '',
+      program: row.program_or_post || '',
+      stage: row.stage || '',
+      category: row.category || 'Common (all categories)',
     }
   }
   const pivotMap = new Map<string, { label: any; byYear: Map<number, any> }>()
-  for (const row of nationalCutoffs) {
+  for (const row of enrichedCutoffs) {
     const key = pivotKey(row)
     if (!pivotMap.has(key)) pivotMap.set(key, { label: pivotLabel(row), byYear: new Map() })
     pivotMap.get(key)!.byYear.set(row.year, row)
@@ -340,7 +407,7 @@ export default async function ExamDetailPage({
         )}
 
         <div className="flex flex-wrap gap-3 mb-6 sm:mb-8">
-          <SaveExamButton examId={exam.id} />
+          <TrackExamButton examId={exam.id} examSlug={exam.slug} />
         </div>
 
         {/* How to crack this exam — generic evergreen strategy */}
@@ -453,10 +520,10 @@ export default async function ExamDetailPage({
                   <tbody>
                     {pivotRows.map((pr, idx) => (
                       <tr key={idx} className="border-t border-gray-100 hover:bg-gray-50 transition-colors">
-                        {hasInstitute && <td className="px-2 sm:px-3 py-3 text-gray-900 whitespace-nowrap text-xs sm:text-sm font-medium">{pr.label.institute ?? '—'}</td>}
-                        {hasPaper && <td className="px-2 sm:px-3 py-3 text-gray-600 whitespace-nowrap text-xs sm:text-sm">{pr.label.branch ?? '—'}</td>}
-                        {hasProgram && <td className="px-2 sm:px-3 py-3 text-gray-600 whitespace-nowrap text-xs sm:text-sm">{pr.label.program ?? '—'}</td>}
-                        {hasStage && <td className="px-2 sm:px-3 py-3 text-gray-600 whitespace-nowrap text-xs sm:text-sm">{pr.label.stage ?? '—'}</td>}
+                        {hasInstitute && <td className="px-2 sm:px-3 py-3 text-gray-900 whitespace-nowrap text-xs sm:text-sm font-medium">{pr.label.institute}</td>}
+                        {hasPaper && <td className="px-2 sm:px-3 py-3 text-gray-600 whitespace-nowrap text-xs sm:text-sm">{pr.label.branch}</td>}
+                        {hasProgram && <td className="px-2 sm:px-3 py-3 text-gray-600 whitespace-nowrap text-xs sm:text-sm">{pr.label.program}</td>}
+                        {hasStage && <td className="px-2 sm:px-3 py-3 text-gray-600 whitespace-nowrap text-xs sm:text-sm">{pr.label.stage}</td>}
                         <td className="px-2 sm:px-3 py-3 text-gray-600 whitespace-nowrap text-xs sm:text-sm">
                           <span className="px-2 py-1 bg-gray-100 rounded-full text-xs font-medium">{pr.label.category}</span>
                         </td>
@@ -522,12 +589,12 @@ export default async function ExamDetailPage({
                       <tbody>
                         {nationalByYear.get(year)!.map((row) => (
                           <tr key={row.id} className="border-t border-gray-100">
-                            {hasInstitute && <td className="px-3 py-2 text-gray-900">{row.institute_name ?? '—'}</td>}
-                            {hasPaper && <td className="px-3 py-2 text-gray-600">{row.paper_or_branch ?? '—'}</td>}
-                            {hasProgram && <td className="px-3 py-2 text-gray-600">{row.program_or_post ?? '—'}</td>}
-                            {hasStage && <td className="px-3 py-2 text-gray-600">{row.stage ?? '—'}</td>}
-                            {hasSection && <td className="px-3 py-2 text-gray-600">{row.section ?? '—'}</td>}
-                            <td className="px-3 py-2 text-gray-600">{row.category ?? 'Common (all categories)'}</td>
+                            {hasInstitute && <td className="px-3 py-2 text-gray-900">{row.institute_name}</td>}
+                            {hasPaper && <td className="px-3 py-2 text-gray-600">{row.paper_or_branch}</td>}
+                            {hasProgram && <td className="px-3 py-2 text-gray-600">{row.program_or_post}</td>}
+                            {hasStage && <td className="px-3 py-2 text-gray-600">{row.stage}</td>}
+                            {hasSection && <td className="px-3 py-2 text-gray-600">{row.section}</td>}
+                            <td className="px-3 py-2 text-gray-600">{row.category || 'Common (all categories)'}</td>
                             <td className="px-3 py-2 text-gray-900 font-medium">
                               {row.cutoff_score != null ? (
                                 <>

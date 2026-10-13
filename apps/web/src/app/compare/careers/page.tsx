@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase'
 import Link from 'next/link'
 import { ArrowLeft, TrendingUp, IndianRupee, BarChart3, Scale, Heart, X, CheckCircle2 } from 'lucide-react'
+import { PageSkeleton } from '@/components/LoadingSkeleton'
 
 interface Career {
   id: string
@@ -80,11 +81,7 @@ export default function CompareCareersPage() {
   }
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600" />
-      </div>
-    )
+    return <PageSkeleton />
   }
 
   if (careers.length === 0) {

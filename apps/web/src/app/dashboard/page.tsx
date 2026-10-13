@@ -1,5 +1,6 @@
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { redirect } from 'next/navigation'
+import UpcomingExams from '@/components/UpcomingExams'
 
 export default async function DashboardPage() {
   const supabase = await createServerSupabaseClient()
@@ -216,6 +217,9 @@ export default async function DashboardPage() {
                 Complete Profile
               </a>
             </div>
+
+            {/* Upcoming Exams */}
+            <UpcomingExams />
           </div>
         </div>
       </div>

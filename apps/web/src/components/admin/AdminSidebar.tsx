@@ -4,12 +4,13 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import {
   LayoutDashboard, Briefcase, Building2, FileText, Bell, Users,
-  GraduationCap, LogOut, ArrowLeft, History, Settings, BookOpen, Map, DollarSign, Crown,
+  GraduationCap, LogOut, ArrowLeft, History, Settings, BookOpen, Map, DollarSign, Crown, RefreshCw,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase'
 
 const LINKS = [
   { href: '/admin', label: 'Overview', icon: LayoutDashboard },
+  { href: '/admin/automation', label: 'Automation', icon: RefreshCw },
   { href: '/admin/alerts', label: 'Data Alerts', icon: Bell },
   { href: '/admin/notifications', label: 'Notifications', icon: Bell },
   { href: '/admin/careers', label: 'Careers', icon: Briefcase },

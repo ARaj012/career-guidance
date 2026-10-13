@@ -19,6 +19,8 @@ import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
 
 export const runtime = 'nodejs'
 export const maxDuration = 30
+// Don't cache chat responses - they should be real-time
+export const dynamic = 'force-dynamic'
 
 const groqApiKey = process.env.GROQ_API_KEY
 if (!groqApiKey) {
@@ -68,6 +70,22 @@ export async function POST(req: NextRequest) {
 
     if (!Array.isArray(messages) || messages.length === 0) {
       return NextResponse.json({ error: 'messages array is required' }, { status: 400 })
+    }
+
+    if (messages.length > 20) {
+      return NextResponse.json({ error: 'Too many messages (max 20)' }, { status: 400 })
+    }
+
+    for (const msg of messages) {
+      if (!msg.role || !['user', 'assistant'].includes(msg.role)) {
+        return NextResponse.json({ error: 'Invalid message role' }, { status: 400 })
+      }
+      if (!msg.content || typeof msg.content !== 'string') {
+        return NextResponse.json({ error: 'Invalid message content' }, { status: 400 })
+      }
+      if (msg.content.length > 5000) {
+        return NextResponse.json({ error: 'Message too long (max 5000 chars)' }, { status: 400 })
+      }
     }
 
     // Cap history sent to the model to keep latency bounded and stay

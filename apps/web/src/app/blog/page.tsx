@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase'
 import Link from 'next/link'
 import { Calendar, Clock, Tag, Search, FileText } from 'lucide-react'
+import { ListSkeleton } from '@/components/LoadingSkeleton'
 
 interface BlogPost {
   id: string
@@ -77,8 +78,12 @@ export default function BlogPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600" />
+      <div className="min-h-screen bg-gray-50 p-4 sm:p-6 lg:p-8">
+        <div className="max-w-7xl mx-auto">
+          <div className="h-8 w-1/3 bg-gray-200 rounded animate-pulse mb-6" />
+          <div className="h-4 w-1/2 bg-gray-200 rounded animate-pulse mb-8" />
+          <ListSkeleton count={8} />
+        </div>
       </div>
     )
   }

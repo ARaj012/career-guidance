@@ -2,6 +2,7 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
+import { Metadata } from 'next'
 import RoadmapProgressTracker from '@/components/RoadmapProgressTracker'
 
 type Step = { title: string; description?: string; duration?: string }
@@ -638,6 +639,78 @@ async function getCutoffPreview(supabase: any, examId: string, preferredCollegeI
     collegeSlug: best.college?.slug,
     trend,
     yearsAvailableTotal: new Set((data as any[]).map((r) => r.year)).size,
+  }
+}
+
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  const { slug } = await params
+  const supabase = await createServerSupabaseClient()
+
+  // First check if it's a career (roadmaps are generated from careers)
+  const { data: career } = await supabase.from('careers').select('title, description, category').eq('slug', slug).maybeSingle()
+
+  if (career) {
+    const description = career.description || `Step-by-step career roadmap for ${career.title}. Learn the exact path to build skills, get degrees, certifications, and land your dream job in ${career.category}.`
+
+    return {
+      title: `${career.title} - Career Roadmap | CareerGuide`,
+      description,
+      keywords: `${career.title}, career roadmap, ${career.category}, career path, step-by-step guide, skills, certifications, career planning`,
+      openGraph: {
+        type: 'article',
+        locale: 'en_IN',
+        url: `https://careerguide.com/roadmaps/${slug}`,
+        title: `${career.title} - Complete Career Roadmap`,
+        description,
+        siteName: 'CareerGuide',
+      },
+      twitter: {
+        card: 'summary_large_image',
+        title: `${career.title} | CareerGuide`,
+        description,
+      },
+      alternates: {
+        canonical: `https://careerguide.com/roadmaps/${slug}`,
+      },
+    }
+  }
+
+  // Fallback: check if it's a direct roadmap in the database
+  const { data: roadmap } = await supabase
+    .from('roadmaps')
+    .select('title, description, category')
+    .eq('slug', slug)
+    .maybeSingle()
+
+  if (roadmap) {
+    const description = roadmap.description || `Step-by-step career roadmap for ${roadmap.title}. Learn the exact path to build skills, get degrees, certifications, and land your dream job in ${roadmap.category}.`
+
+    return {
+      title: `${roadmap.title} - Career Roadmap | CareerGuide`,
+      description,
+      keywords: `${roadmap.title}, career roadmap, ${roadmap.category}, career path, step-by-step guide, skills, certifications, career planning`,
+      openGraph: {
+        type: 'article',
+        locale: 'en_IN',
+        url: `https://careerguide.com/roadmaps/${slug}`,
+        title: `${roadmap.title} - Complete Career Roadmap`,
+        description,
+        siteName: 'CareerGuide',
+      },
+      twitter: {
+        card: 'summary_large_image',
+        title: `${roadmap.title} | CareerGuide`,
+        description,
+      },
+      alternates: {
+        canonical: `https://careerguide.com/roadmaps/${slug}`,
+      },
+    }
+  }
+
+  return {
+    title: 'Roadmap Not Found | CareerGuide',
+    description: 'The roadmap you are looking for does not exist.',
   }
 }
 
