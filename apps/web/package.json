@@ -9,7 +9,8 @@
     "lint": "eslint",
     "test": "vitest",
     "test:ui": "vitest --ui --watch",
-    "test:coverage": "vitest --coverage"
+    "test:coverage": "vitest --coverage",
+    "automation": "npx tsx scripts/automation.ts"
   },
   "dependencies": {
     "@prisma/client": "^7.7.0",
@@ -46,6 +47,7 @@
     "jsdom": "^29.1.1",
     "prisma": "^7.7.0",
     "tailwindcss": "^4",
+    "tsx": "^4.23.15",
     "typescript": "^5",
     "vitest": "^4.1.11"
   }
