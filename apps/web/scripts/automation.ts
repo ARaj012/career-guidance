@@ -27,13 +27,34 @@ async function runAutomation() {
       .from('exams')
       .select('*')
       .eq('slug', 'gate')
-      .single()
+      .maybeSingle()
     
-    if (fetchError || !currentExam) {
+    if (fetchError) {
       console.error('❌ Error fetching current exam data:', fetchError)
+      console.log('📋 Error details:', JSON.stringify(fetchError, null, 2))
       process.exit(1)
     }
     
+    if (!currentExam) {
+      console.log('⚠️ GATE exam not found in database')
+      console.log('📋 This might mean:')
+      console.log('   - The exams table does not exist')
+      console.log('   - The GATE exam record does not exist')
+      console.log('   - The slug column name is different')
+      console.log('🔍 Checking database structure...')
+      
+      // Try to check if table exists
+      const { data: tables } = await supabase
+        .from('information_schema.tables')
+        .select('table_name')
+        .eq('table_schema', 'public')
+      
+      console.log('📋 Available tables:', tables?.map(t => t.table_name) || 'none')
+      
+      process.exit(1)
+    }
+    
+    console.log('✅ Found GATE exam in database')
     console.log('📅 Current exam data:', {
       examDate: currentExam.exam_date,
       registrationStart: currentExam.registration_start_date,
@@ -77,6 +98,7 @@ async function runAutomation() {
       
       if (updateError) {
         console.error('❌ Error updating database:', updateError)
+        console.log('📋 Error details:', JSON.stringify(updateError, null, 2))
         process.exit(1)
       }
       
@@ -94,6 +116,7 @@ async function runAutomation() {
     
   } catch (error) {
     console.error('❌ Automation failed:', error)
+    console.log('📋 Error details:', JSON.stringify(error, null, 2))
     process.exit(1)
   }
 }
