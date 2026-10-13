@@ -13,6 +13,20 @@ const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
 if (!supabaseUrl || !supabaseKey) {
   console.error('❌ Missing Supabase environment variables')
+  console.error('📋 Supabase URL:', supabaseUrl)
+  console.error('📋 Supabase Key exists:', !!supabaseKey)
+  process.exit(1)
+}
+
+// Validate Supabase URL format
+try {
+  const url = new URL(supabaseUrl)
+  console.log('✅ Supabase URL is valid:', url.hostname)
+  if (!supabaseUrl.includes('/rest/v1')) {
+    console.log('⚠️ URL does not include /rest/v1 path')
+  }
+} catch (error) {
+  console.error('❌ Invalid Supabase URL format:', supabaseUrl)
   process.exit(1)
 }
 
@@ -22,21 +36,47 @@ async function runAutomation() {
   console.log('🚀 Starting GATE Automation...')
   console.log('📋 Supabase URL:', supabaseUrl)
   console.log('📋 Supabase Key exists:', !!supabaseKey)
+  console.log('📋 Supabase Key length:', supabaseKey.length)
   
   try {
-    // Test connection
+    // Test connection with a simple health check
     console.log('🔍 Testing Supabase connection...')
+    
+    // Try a simple API call to check if the URL is correct
+    const healthResponse = await fetch(`${supabaseUrl}/rest/v1/`, {
+      method: 'GET',
+      headers: {
+        'apikey': supabaseKey,
+        'Authorization': `Bearer ${supabaseKey}`
+      }
+    })
+    
+    console.log('📋 Health check status:', healthResponse.status)
+    console.log('📋 Health check ok:', healthResponse.ok)
+    
+    if (!healthResponse.ok) {
+      const text = await healthResponse.text()
+      console.error('❌ Health check failed:', text)
+      process.exit(1)
+    }
+    
+    console.log('✅ Supabase API is accessible')
+    
+    // Now try to query the exams table
+    console.log('🔍 Testing exams table access...')
     const { data: testData, error: testError } = await supabase
       .from('exams')
       .select('count', { count: 'exact', head: true })
     
     if (testError) {
-      console.error('❌ Connection test failed:', testError)
+      console.error('❌ Exams table query failed:', testError)
+      console.log('📋 Error code:', testError.code)
+      console.log('📋 Error message:', testError.message)
       console.log('📋 Error details:', JSON.stringify(testError, null, 2))
       process.exit(1)
     }
     
-    console.log('✅ Connection successful, total exams:', testData)
+    console.log('✅ Exams table accessible, total exams:', testData)
     
     // Get current GATE data from database
     console.log('🔍 Fetching GATE exam data...')
