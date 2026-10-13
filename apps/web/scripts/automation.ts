@@ -20,9 +20,26 @@ const supabase = createClient(supabaseUrl, supabaseKey)
 
 async function runAutomation() {
   console.log('🚀 Starting GATE Automation...')
+  console.log('📋 Supabase URL:', supabaseUrl)
+  console.log('📋 Supabase Key exists:', !!supabaseKey)
   
   try {
+    // Test connection
+    console.log('🔍 Testing Supabase connection...')
+    const { data: testData, error: testError } = await supabase
+      .from('exams')
+      .select('count', { count: 'exact', head: true })
+    
+    if (testError) {
+      console.error('❌ Connection test failed:', testError)
+      console.log('📋 Error details:', JSON.stringify(testError, null, 2))
+      process.exit(1)
+    }
+    
+    console.log('✅ Connection successful, total exams:', testData)
+    
     // Get current GATE data from database
+    console.log('🔍 Fetching GATE exam data...')
     const { data: currentExam, error: fetchError } = await supabase
       .from('exams')
       .select('*')
