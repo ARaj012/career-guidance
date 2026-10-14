@@ -28,9 +28,15 @@ if (!supabaseUrl.startsWith('https://') && !supabaseUrl.startsWith('http://')) {
   process.exit(1)
 }
 
-// Remove /rest/v1 suffix if present
-const cleanUrl = supabaseUrl.replace(/\/rest\/v1$/, '').replace(/\/$/, '')
+// Remove /rest/v1 suffix if present (aggressive cleaning)
+let cleanUrl = supabaseUrl
+  .replace(/\/rest\/v1\/?$/, '')  // Remove /rest/v1 or /rest/v1/
+  .replace(/\/$/, '')              // Remove trailing slash
+  .replace(/\/rest\/v1$/, '')      // Remove /rest/v1 again (double check)
+
 console.log('✅ Supabase URL is valid:', cleanUrl)
+console.log('📋 Original URL:', supabaseUrl)
+console.log('📋 Cleaned URL:', cleanUrl)
 
 // Validate Supabase Service Role Key length
 if (supabaseKey.length < 30) {
