@@ -39,31 +39,10 @@ async function runAutomation() {
   console.log('📋 Supabase Key length:', supabaseKey.length)
   
   try {
-    // Test connection with a simple health check
+    // Test connection with a simple query
     console.log('🔍 Testing Supabase connection...')
     
-    // Try a simple API call to check if the URL is correct
-    const healthResponse = await fetch(`${supabaseUrl}/rest/v1/`, {
-      method: 'GET',
-      headers: {
-        'apikey': supabaseKey,
-        'Authorization': `Bearer ${supabaseKey}`
-      }
-    })
-    
-    console.log('📋 Health check status:', healthResponse.status)
-    console.log('📋 Health check ok:', healthResponse.ok)
-    
-    if (!healthResponse.ok) {
-      const text = await healthResponse.text()
-      console.error('❌ Health check failed:', text)
-      process.exit(1)
-    }
-    
-    console.log('✅ Supabase API is accessible')
-    
-    // Now try to query the exams table
-    console.log('🔍 Testing exams table access...')
+    // Try to query the exams table directly
     const { data: testData, error: testError } = await supabase
       .from('exams')
       .select('count', { count: 'exact', head: true })
