@@ -33,13 +33,13 @@ const cleanUrl = supabaseUrl.replace(/\/rest\/v1$/, '').replace(/\/$/, '')
 console.log('✅ Supabase URL is valid:', cleanUrl)
 
 // Validate Supabase Service Role Key length
-if (supabaseKey.length < 60) {
+if (supabaseKey.length < 30) {
   console.error('❌ Invalid Supabase Service Role Key')
   console.error('📋 Key length:', supabaseKey.length)
-  console.error('💡 A valid Service Role Key is typically 80-120 characters long')
+  console.error('💡 A valid Service Role Key is typically 30+ characters long')
   console.error('💡 Your key appears to be truncated or incorrect')
   console.error('💡 Solution: Copy the full Service Role Key from Supabase → Settings → API → Service Role Key')
-  console.error('💡 The key should start with "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."')
+  console.error('💡 The key should start with "sb_secret_" or "eyJhbGci..."')
   process.exit(1)
 }
 
