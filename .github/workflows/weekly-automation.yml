@@ -13,6 +13,15 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          ref: main
+      
+      - name: Show commit info
+        run: |
+          echo "Current commit:"
+          git log -1 --oneline
+          echo "Branch:"
+          git branch --show-current
       
       - name: Setup Node.js
         uses: actions/setup-node@v4
