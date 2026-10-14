@@ -15,26 +15,41 @@ if (!supabaseUrl || !supabaseKey) {
   console.error('❌ Missing Supabase environment variables')
   console.error('📋 Supabase URL:', supabaseUrl)
   console.error('📋 Supabase Key exists:', !!supabaseKey)
+  console.error('💡 Solution: Add CAREER_GUIDANCE_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY to GitHub Secrets')
   process.exit(1)
 }
 
 // Validate Supabase URL format
-try {
-  const url = new URL(supabaseUrl)
-  console.log('✅ Supabase URL is valid:', url.hostname)
-  if (!supabaseUrl.includes('/rest/v1')) {
-    console.log('⚠️ URL does not include /rest/v1 path')
-  }
-} catch (error) {
-  console.error('❌ Invalid Supabase URL format:', supabaseUrl)
+if (!supabaseUrl.startsWith('https://') && !supabaseUrl.startsWith('http://')) {
+  console.error('❌ Invalid Supabase URL format')
+  console.error('📋 URL must start with "https://" or "http://"')
+  console.error('📋 Current URL:', supabaseUrl)
+  console.error('💡 Solution: URL should be like "https://your-project.supabase.co" (no /rest/v1 suffix)')
   process.exit(1)
 }
 
-const supabase = createClient(supabaseUrl, supabaseKey)
+// Remove /rest/v1 suffix if present
+const cleanUrl = supabaseUrl.replace(/\/rest\/v1$/, '').replace(/\/$/, '')
+console.log('✅ Supabase URL is valid:', cleanUrl)
+
+// Validate Supabase Service Role Key length
+if (supabaseKey.length < 60) {
+  console.error('❌ Invalid Supabase Service Role Key')
+  console.error('📋 Key length:', supabaseKey.length)
+  console.error('💡 A valid Service Role Key is typically 80-120 characters long')
+  console.error('💡 Your key appears to be truncated or incorrect')
+  console.error('💡 Solution: Copy the full Service Role Key from Supabase → Settings → API → Service Role Key')
+  console.error('💡 The key should start with "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."')
+  process.exit(1)
+}
+
+console.log('✅ Supabase Key is valid (length:', supabaseKey.length, ')')
+
+const supabase = createClient(cleanUrl, supabaseKey)
 
 async function runAutomation() {
   console.log('🚀 Starting GATE Automation...')
-  console.log('📋 Supabase URL:', supabaseUrl)
+  console.log('📋 Supabase URL:', cleanUrl)
   console.log('📋 Supabase Key exists:', !!supabaseKey)
   console.log('📋 Supabase Key length:', supabaseKey.length)
   
