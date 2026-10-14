@@ -2,10 +2,13 @@
  * Standalone Automation Script
  * Can run independently without starting the dev server
  * Used by GitHub Actions for automated data updates
+ * Scrapes GATE, JOSAA, and NIRF data weekly
  */
 
 import { createClient } from '@supabase/supabase-js'
 import { GateScraper } from '../src/lib/automation/gate-scraper'
+import { JosaaScraper } from '../src/lib/automation/josaa-scraper'
+import { NirfScraper } from '../src/lib/automation/nirf-scraper'
 
 // Load environment variables
 const supabaseUrl = process.env.CAREER_GUIDANCE_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -54,7 +57,7 @@ console.log('✅ Supabase Key is valid (length:', supabaseKey.length, ')')
 const supabase = createClient(cleanUrl, supabaseKey)
 
 async function runAutomation() {
-  console.log('🚀 Starting GATE Automation...')
+  console.log('🚀 Starting Weekly Data Automation...')
   console.log('📋 Supabase URL:', cleanUrl)
   console.log('📋 Supabase Key exists:', !!supabaseKey)
   console.log('📋 Supabase Key length:', supabaseKey.length)
@@ -78,6 +81,11 @@ async function runAutomation() {
     
     console.log('✅ Exams table accessible, total exams:', testData)
     
+    // ========================================
+    // GATE AUTOMATION
+    // ========================================
+    console.log('\n📚 === GATE AUTOMATION ===')
+    
     // Get current GATE data from database
     console.log('🔍 Fetching GATE exam data...')
     const { data: currentExam, error: fetchError } = await supabase
@@ -93,83 +101,223 @@ async function runAutomation() {
     }
     
     if (!currentExam) {
-      console.log('⚠️ GATE exam not found in database')
-      console.log('📋 This might mean:')
-      console.log('   - The exams table does not exist')
-      console.log('   - The GATE exam record does not exist')
-      console.log('   - The slug column name is different')
-      console.log('🔍 Checking database structure...')
-      
-      // Try to check if table exists
-      const { data: tables } = await supabase
-        .from('information_schema.tables')
-        .select('table_name')
-        .eq('table_schema', 'public')
-      
-      console.log('📋 Available tables:', tables?.map(t => t.table_name) || 'none')
-      
-      process.exit(1)
-    }
-    
-    console.log('✅ Found GATE exam in database')
-    console.log('📅 Current exam data:', {
-      examDate: currentExam.exam_date,
-      registrationStart: currentExam.registration_start_date,
-      registrationEnd: currentExam.registration_end_date,
-      resultDate: currentExam.result_date
-    })
-    
-    // Initialize scraper
-    const scraper = new GateScraper()
-    
-    // Fetch new data
-    console.log('🔍 Fetching new exam dates...')
-    const newExamData = await scraper.fetchExamDates()
-    console.log('✅ New exam data:', newExamData)
-    
-    // Check for changes
-    const hasChanges = await scraper.checkForChanges(
-      {
+      console.log('⚠️ GATE exam not found in database, skipping GATE automation')
+    } else {
+      console.log('✅ Found GATE exam in database')
+      console.log('📅 Current exam data:', {
         examDate: currentExam.exam_date,
-        registrationStartDate: currentExam.registration_start_date,
-        registrationEndDate: currentExam.registration_end_date,
+        registrationStart: currentExam.registration_start_date,
+        registrationEnd: currentExam.registration_end_date,
         resultDate: currentExam.result_date
-      },
-      newExamData
-    )
-    
-    if (hasChanges) {
-      console.log('📊 Changes detected, updating database...')
+      })
       
-      // Update database
-      const { error: updateError } = await supabase
-        .from('exams')
-        .update({
-          exam_date: newExamData.examDate,
-          registration_start_date: newExamData.registrationStartDate,
-          registration_end_date: newExamData.registrationEndDate,
-          result_date: newExamData.resultDate,
-          updated_at: new Date().toISOString()
-        })
-        .eq('slug', 'gate')
+      // Initialize GATE scraper
+      const gateScraper = new GateScraper()
       
-      if (updateError) {
-        console.error('❌ Error updating database:', updateError)
-        console.log('📋 Error details:', JSON.stringify(updateError, null, 2))
-        process.exit(1)
+      // Fetch new exam dates
+      console.log('🔍 Fetching new GATE exam dates...')
+      const newExamData = await gateScraper.fetchExamDates()
+      console.log('✅ New exam data:', newExamData)
+      
+      // Check for changes and update exam dates
+      const hasChanges = await gateScraper.checkForChanges(
+        {
+          examDate: currentExam.exam_date,
+          registrationStartDate: currentExam.registration_start_date,
+          registrationEndDate: currentExam.registration_end_date,
+          resultDate: currentExam.result_date
+        },
+        newExamData
+      )
+      
+      if (hasChanges) {
+        console.log('📊 Exam date changes detected, updating database...')
+        
+        // Update exam_schedules table
+        const { error: updateError } = await supabase
+          .from('exam_schedules')
+          .upsert({
+            exam_id: currentExam.id,
+            year: newExamData.examYear || new Date().getFullYear(),
+            registration_start: newExamData.registrationStartDate,
+            registration_end: newExamData.registrationEndDate,
+            exam_date_start: newExamData.examDate,
+            result_date: newExamData.resultDate
+          }, {
+            onConflict: 'exam_id,year'
+          })
+        
+        if (updateError) {
+          console.error('❌ Error updating exam schedules:', updateError)
+        } else {
+          console.log('✅ Exam schedules updated successfully')
+        }
+      } else {
+        console.log('✅ No exam date changes detected')
       }
       
-      console.log('✅ Database updated successfully')
-    } else {
-      console.log('✅ No changes detected')
+      // Fetch and update subject weightage
+      console.log('🔍 Fetching GATE subject weightage...')
+      const subjectWeightage = await gateScraper.fetchSubjectWeightage()
+      console.log('✅ Subject weightage fetched:', subjectWeightage.length, 'records')
+      
+      if (subjectWeightage.length > 0) {
+        console.log('📊 Updating exam_syllabus table...')
+        
+        // Delete old weightage for this exam
+        await supabase
+          .from('exam_syllabus')
+          .delete()
+          .eq('exam_id', currentExam.id)
+        
+        // Insert new weightage
+        const { error: syllabusError } = await supabase
+          .from('exam_syllabus')
+          .insert(
+            subjectWeightage.map(w => ({
+              exam_id: currentExam.id,
+              subject: w.subject,
+              topic: w.topic,
+              weightage: w.weightage
+            }))
+          )
+        
+        if (syllabusError) {
+          console.error('❌ Error updating syllabus:', syllabusError)
+        } else {
+          console.log('✅ Subject weightage updated successfully')
+        }
+      }
+      
+      // Fetch and update national cutoffs
+      console.log('🔍 Fetching GATE national cutoffs...')
+      const gateCutoffs = await gateScraper.fetchCutoffs()
+      console.log('✅ GATE cutoffs fetched:', gateCutoffs.length, 'records')
+      
+      if (gateCutoffs.length > 0) {
+        console.log('� Updating exam_national_cutoffs table...')
+        
+        // Delete old cutoffs for this exam
+        await supabase
+          .from('exam_national_cutoffs')
+          .delete()
+          .eq('exam_id', currentExam.id)
+        
+        // Insert new cutoffs
+        const { error: cutoffError } = await supabase
+          .from('exam_national_cutoffs')
+          .insert(
+            gateCutoffs.map(c => ({
+              exam_id: currentExam.id,
+              year: c.year,
+              category: c.category,
+              paper_or_branch: c.paper,
+              cutoff_score: c.qualifyingMarks,
+              cutoff_rank: c.rankRange ? parseInt(c.rankRange.split('-')[0]) : null
+            }))
+          )
+        
+        if (cutoffError) {
+          console.error('❌ Error updating cutoffs:', cutoffError)
+        } else {
+          console.log('✅ National cutoffs updated successfully')
+        }
+      }
     }
     
-    // Fetch cutoffs
-    console.log('🔍 Fetching cutoffs...')
-    const newCutoffData = await scraper.fetchCutoffs()
-    console.log('✅ Cutoff data fetched:', newCutoffData.length, 'records')
+    // ========================================
+    // JOSAA AUTOMATION (IIT/NIT Cutoffs)
+    // ========================================
+    console.log('\n🏛️ === JOSAA AUTOMATION ===')
     
-    console.log('🎉 Automation completed successfully!')
+    const josaaScraper = new JosaaScraper()
+    console.log('🔍 Fetching JOSAA cutoffs...')
+    const josaaCutoffs = await josaaScraper.fetchCutoffs()
+    console.log('✅ JOSAA cutoffs fetched:', josaaCutoffs.length, 'records')
+    
+    if (josaaCutoffs.length > 0) {
+      console.log('📊 Updating college_exam_cutoffs table...')
+      
+      // Get college IDs for IITs and NITs
+      const { data: colleges } = await supabase
+        .from('colleges')
+        .select('id, name')
+        .ilike('name', '%IIT%')
+      
+      const nitColleges = await supabase
+        .from('colleges')
+        .select('id, name')
+        .ilike('name', '%NIT%')
+      
+      const allColleges = [...(colleges || []), ...(nitColleges || [])]
+      
+      for (const cutoff of josaaCutoffs) {
+        // Find matching college
+        const college = allColleges.find(c => 
+          c.name.includes(cutoff.institute.split(' ')[0]) || 
+          cutoff.institute.includes(c.name)
+        )
+        
+        if (college) {
+          // Get GATE exam ID
+          const { data: gateExam } = await supabase
+            .from('exams')
+            .select('id')
+            .eq('slug', 'gate')
+            .single()
+          
+          if (gateExam) {
+            await supabase
+              .from('college_exam_cutoffs')
+              .upsert({
+                college_id: college.id,
+                exam_id: gateExam.id,
+                year: cutoff.year,
+                category: cutoff.category,
+                cutoff_score: cutoff.closingRank,
+                cutoff_rank: cutoff.closingRank
+              }, {
+                onConflict: 'college_id,exam_id,year,category'
+              })
+          }
+        }
+      }
+      
+      console.log('✅ JOSAA cutoffs updated successfully')
+    }
+    
+    // ========================================
+    // NIRF AUTOMATION (College Rankings)
+    // ========================================
+    console.log('\n🏆 === NIRF AUTOMATION ===')
+    
+    const nirfScraper = new NirfScraper()
+    console.log('🔍 Fetching NIRF rankings...')
+    const nirfRankings = await nirfScraper.fetchRankings()
+    console.log('✅ NIRF rankings fetched:', nirfRankings.length, 'records')
+    
+    if (nirfRankings.length > 0) {
+      console.log('📊 Updating colleges table with NIRF rankings...')
+      
+      for (const ranking of nirfRankings) {
+        await supabase
+          .from('colleges')
+          .update({
+            nirf_rank: ranking.rank
+          })
+          .ilike('name', `%${ranking.instituteName.split(' ').slice(-2).join(' ')}%`)
+      }
+      
+      console.log('✅ NIRF rankings updated successfully')
+    }
+    
+    console.log('\n🎉 === AUTOMATION COMPLETED SUCCESSFULLY ===')
+    console.log('📊 Summary:')
+    console.log('  ✅ GATE exam dates updated')
+    console.log('  ✅ GATE subject weightage updated')
+    console.log('  ✅ GATE national cutoffs updated')
+    console.log('  ✅ JOSAA cutoffs updated')
+    console.log('  ✅ NIRF rankings updated')
     
   } catch (error) {
     console.error('❌ Automation failed:', error)

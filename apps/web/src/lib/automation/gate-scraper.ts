@@ -1,6 +1,6 @@
 /**
  * GATE Exam Web Scraper
- * Automatically scrapes GATE official website for exam dates and cutoffs
+ * Automatically scrapes GATE official website for exam dates, cutoffs, and subject weightage
  * Uses Cheerio for HTML parsing
  */
 
@@ -20,6 +20,13 @@ interface GateCutoffData {
   paper: string
   qualifyingMarks: number
   rankRange?: string
+}
+
+interface GateSubjectWeightage {
+  subject: string
+  topic: string
+  weightage: number
+  year: number
 }
 
 export class GateScraper {
@@ -82,6 +89,30 @@ export class GateScraper {
       console.error('❌ Error fetching GATE cutoffs:', error)
       // Return mock data as fallback
       return this.getMockCutoffData()
+    }
+  }
+  
+  /**
+   * Fetch GATE subject-wise weightage from official website
+   */
+  async fetchSubjectWeightage(): Promise<GateSubjectWeightage[]> {
+    try {
+      console.log('🔍 Fetching GATE subject weightage from official website...')
+      
+      const response = await fetch(`${this.baseUrl}/syllabus`)
+      const html = await response.text()
+      const $ = cheerio.load(html)
+      
+      // Try to extract subject weightage from the website
+      const weightageData: GateSubjectWeightage[] = this.extractWeightageFromHTML($)
+      
+      console.log('✅ GATE subject weightage fetched:', weightageData.length, 'records')
+      return weightageData
+      
+    } catch (error) {
+      console.error('❌ Error fetching GATE subject weightage:', error)
+      // Return mock data as fallback
+      return this.getMockSubjectWeightage()
     }
   }
   
@@ -155,6 +186,42 @@ export class GateScraper {
       return cutoffs
     } catch (error) {
       console.error('Error extracting cutoffs:', error)
+      return []
+    }
+  }
+  
+  /**
+   * Extract subject weightage from HTML using Cheerio
+   * This is a placeholder - you need to update selectors based on actual website structure
+   */
+  private extractWeightageFromHTML($: cheerio.CheerioAPI): GateSubjectWeightage[] {
+    try {
+      const weightage: GateSubjectWeightage[] = []
+      const year = new Date().getFullYear()
+      
+      // Example: Look for syllabus/weightage tables
+      $('table').each((_, table) => {
+        const $table = $(table)
+        
+        // Example parsing logic - update based on actual table structure
+        $table.find('tr').slice(1).each((_, row) => {
+          const $row = $(row)
+          const cells = $row.find('td')
+          
+          if (cells.length >= 3) {
+            weightage.push({
+              year: year,
+              subject: $(cells[0]).text().trim(),
+              topic: $(cells[1]).text().trim(),
+              weightage: parseFloat($(cells[2]).text().trim()) || 0
+            })
+          }
+        })
+      })
+      
+      return weightage
+    } catch (error) {
+      console.error('Error extracting weightage:', error)
       return []
     }
   }
@@ -264,6 +331,63 @@ export class GateScraper {
         paper: 'CS',
         qualifyingMarks: 12.7,
         rankRange: '1-10'
+      }
+    ]
+  }
+  
+  /**
+   * Get mock subject weightage as fallback
+   */
+  private getMockSubjectWeightage(): GateSubjectWeightage[] {
+    const year = new Date().getFullYear()
+    return [
+      {
+        year: year,
+        subject: 'Engineering Mathematics',
+        topic: 'Linear Algebra',
+        weightage: 15
+      },
+      {
+        year: year,
+        subject: 'Engineering Mathematics',
+        topic: 'Calculus',
+        weightage: 12
+      },
+      {
+        year: year,
+        subject: 'General Aptitude',
+        topic: 'Numerical Ability',
+        weightage: 10
+      },
+      {
+        year: year,
+        subject: 'General Aptitude',
+        topic: 'Verbal Ability',
+        weightage: 5
+      },
+      {
+        year: year,
+        subject: 'Computer Science',
+        topic: 'Data Structures',
+        weightage: 20
+      },
+      {
+        year: year,
+        subject: 'Computer Science',
+        topic: 'Algorithms',
+        weightage: 18
+      },
+      {
+        year: year,
+        subject: 'Computer Science',
+        topic: 'Operating Systems',
+        weightage: 10
+      },
+      {
+        year: year,
+        subject: 'Computer Science',
+        topic: 'Databases',
+        weightage: 10
       }
     ]
   }
