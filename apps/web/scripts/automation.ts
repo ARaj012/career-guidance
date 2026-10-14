@@ -54,13 +54,13 @@ if (supabaseKey.length < 30) {
 
 console.log('✅ Supabase Key is valid (length:', supabaseKey.length, ')')
 
-const supabase = createClient(cleanUrl, supabaseKey)
+const supabase = createClient(cleanUrl, supabaseKey!)
 
 async function runAutomation() {
   console.log('🚀 Starting Weekly Data Automation...')
   console.log('📋 Supabase URL:', cleanUrl)
   console.log('📋 Supabase Key exists:', !!supabaseKey)
-  console.log('📋 Supabase Key length:', supabaseKey.length)
+  console.log('📋 Supabase Key length:', supabaseKey?.length || 0)
   
   try {
     // Test connection with a simple query
@@ -284,7 +284,7 @@ async function runAutomation() {
         .select('id, name')
         .ilike('name', '%IIT%')
       
-      const nitColleges = await supabase
+      const { data: nitColleges } = await supabase
         .from('colleges')
         .select('id, name')
         .ilike('name', '%NIT%')
