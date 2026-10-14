@@ -16,6 +16,23 @@ interface JosaaCutoffData {
   closingRank: number
 }
 
+// Retry helper function
+async function retry<T>(fn: () => Promise<T>, attempts = 3, delayMs = 1500): Promise<T> {
+  let lastErr: any;
+  for (let i = 0; i < attempts; i++) {
+    try {
+      return await fn();
+    } catch (e) {
+      lastErr = e;
+      if (i < attempts - 1) {
+        console.log(`⏳ Retry ${i + 1}/${attempts} after ${delayMs}ms...`);
+        await new Promise(res => setTimeout(res, delayMs));
+      }
+    }
+  }
+  throw lastErr;
+}
+
 export class JosaaScraper {
   private baseUrl = 'https://josaa.nic.in'
   
@@ -26,18 +43,46 @@ export class JosaaScraper {
     try {
       console.log('🔍 Fetching JOSAA cutoffs from official website...')
       
-      const response = await fetch(`${this.baseUrl}/`)
-      const html = await response.text()
-      const $ = cheerio.load(html)
+      const data = await retry(async () => {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 30000); // 30s timeout
+        
+        try {
+          const res = await fetch(`${this.baseUrl}/`, { 
+            signal: controller.signal,
+            headers: {
+              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+            }
+          });
+          
+          if (!res.ok) {
+            throw new Error(`HTTP ${res.status}`);
+          }
+          
+          const html = await res.text();
+          const $ = cheerio.load(html);
+          
+          // Try to extract cutoffs from the website
+          const cutoffData: JosaaCutoffData[] = this.extractCutoffsFromHTML($);
+          
+          return cutoffData;
+        } finally {
+          clearTimeout(timeout);
+        }
+      }, 3, 2000);
       
-      // Try to extract cutoffs from the website
-      const cutoffData: JosaaCutoffData[] = this.extractCutoffsFromHTML($)
+      // Ensure we always return an array
+      if (!Array.isArray(data)) {
+        console.warn('⚠️ JosaaScraper: Unexpected response shape, returning empty array');
+        return [];
+      }
       
-      console.log('✅ JOSAA cutoffs fetched:', cutoffData.length, 'records')
-      return cutoffData
+      console.log('✅ JOSAA cutoffs fetched:', data.length, 'records')
+      return data
       
     } catch (error) {
       console.error('❌ Error fetching JOSAA cutoffs:', error)
+      console.log('📋 Using mock data as fallback')
       // Return mock data as fallback
       return this.getMockCutoffData()
     }

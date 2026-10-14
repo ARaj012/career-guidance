@@ -15,6 +15,23 @@ interface NirfRankingData {
   score: number
 }
 
+// Retry helper function
+async function retry<T>(fn: () => Promise<T>, attempts = 3, delayMs = 1500): Promise<T> {
+  let lastErr: any;
+  for (let i = 0; i < attempts; i++) {
+    try {
+      return await fn();
+    } catch (e) {
+      lastErr = e;
+      if (i < attempts - 1) {
+        console.log(`⏳ Retry ${i + 1}/${attempts} after ${delayMs}ms...`);
+        await new Promise(res => setTimeout(res, delayMs));
+      }
+    }
+  }
+  throw lastErr;
+}
+
 export class NirfScraper {
   private baseUrl = 'https://www.nirfindia.org'
   
@@ -25,18 +42,46 @@ export class NirfScraper {
     try {
       console.log('🔍 Fetching NIRF rankings from official website...')
       
-      const response = await fetch(`${this.baseUrl}/Ranking/2024/EngineeringRanking.html`)
-      const html = await response.text()
-      const $ = cheerio.load(html)
+      const data = await retry(async () => {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 30000); // 30s timeout
+        
+        try {
+          const res = await fetch(`${this.baseUrl}/Ranking/2024/EngineeringRanking.html`, { 
+            signal: controller.signal,
+            headers: {
+              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+            }
+          });
+          
+          if (!res.ok) {
+            throw new Error(`HTTP ${res.status}`);
+          }
+          
+          const html = await res.text();
+          const $ = cheerio.load(html);
+          
+          // Try to extract rankings from the website
+          const rankingData: NirfRankingData[] = this.extractRankingsFromHTML($);
+          
+          return rankingData;
+        } finally {
+          clearTimeout(timeout);
+        }
+      }, 3, 2000);
       
-      // Try to extract rankings from the website
-      const rankingData: NirfRankingData[] = this.extractRankingsFromHTML($)
+      // Ensure we always return an array
+      if (!Array.isArray(data)) {
+        console.warn('⚠️ NirfScraper: Unexpected response shape, returning empty array');
+        return [];
+      }
       
-      console.log('✅ NIRF rankings fetched:', rankingData.length, 'records')
-      return rankingData
+      console.log('✅ NIRF rankings fetched:', data.length, 'records')
+      return data
       
     } catch (error) {
       console.error('❌ Error fetching NIRF rankings:', error)
+      console.log('📋 Using mock data as fallback')
       // Return mock data as fallback
       return this.getMockRankingData()
     }
