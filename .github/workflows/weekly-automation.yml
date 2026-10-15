@@ -47,11 +47,14 @@ jobs:
           echo "- **Date**: $(date)" >> $GITHUB_STEP_SUMMARY
           echo "- **Status**: Completed" >> $GITHUB_STEP_SUMMARY
           echo "- **Data Updated**:" >> $GITHUB_STEP_SUMMARY
-          echo "  - GATE exam dates" >> $GITHUB_STEP_SUMMARY
-          echo "  - GATE subject weightage" >> $GITHUB_STEP_SUMMARY
-          echo "  - GATE national cutoffs" >> $GITHUB_STEP_SUMMARY
-          echo "  - JOSAA cutoffs (IITs/NITs)" >> $GITHUB_STEP_SUMMARY
-          echo "  - NIRF rankings" >> $GITHUB_STEP_SUMMARY
+          echo "  - GATE: exam dates, subject weightage, national cutoffs" >> $GITHUB_STEP_SUMMARY
+          echo "  - JEE Main: exam dates, subject weightage, cutoffs" >> $GITHUB_STEP_SUMMARY
+          echo "  - JEE Advanced: exam dates, subject weightage, cutoffs" >> $GITHUB_STEP_SUMMARY
+          echo "  - CAT: exam dates, subject weightage, cutoffs" >> $GITHUB_STEP_SUMMARY
+          echo "  - UPSC/CSE: exam dates, subject weightage, cutoffs" >> $GITHUB_STEP_SUMMARY
+          echo "  - NEET: exam dates, subject weightage, cutoffs" >> $GITHUB_STEP_SUMMARY
+          echo "  - JOSAA: IIT/NIT cutoffs" >> $GITHUB_STEP_SUMMARY
+          echo "  - NIRF: college rankings" >> $GITHUB_STEP_SUMMARY
           echo "- **Next Run**: Next Sunday at 12:00 AM UTC" >> $GITHUB_STEP_SUMMARY
       
       - name: Notify on failure

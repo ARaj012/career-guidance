@@ -2,13 +2,18 @@
  * Standalone Automation Script
  * Can run independently without starting the dev server
  * Used by GitHub Actions for automated data updates
- * Scrapes GATE, JOSAA, and NIRF data weekly
+ * Scrapes GATE, JEE Main, JEE Advanced, CAT, UPSC, NEET, JOSAA, and NIRF data weekly
  */
 
 import { createClient } from '@supabase/supabase-js'
 import { GateScraper } from '../src/lib/automation/gate-scraper'
 import { JosaaScraper } from '../src/lib/automation/josaa-scraper'
 import { NirfScraper } from '../src/lib/automation/nirf-scraper'
+import { JeeMainScraper } from '../src/lib/automation/jee-main-scraper'
+import { JeeAdvancedScraper } from '../src/lib/automation/jee-advanced-scraper'
+import { CatScraper } from '../src/lib/automation/cat-scraper'
+import { UpscScraper } from '../src/lib/automation/upsc-scraper'
+import { NeetScraper } from '../src/lib/automation/neet-scraper'
 
 // Load environment variables
 const supabaseUrl = process.env.CAREER_GUIDANCE_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -55,6 +60,143 @@ if (supabaseKey.length < 30) {
 console.log('✅ Supabase Key is valid (length:', supabaseKey.length, ')')
 
 const supabase = createClient(cleanUrl, supabaseKey!)
+
+// Helper function to run automation for any exam
+async function runExamAutomation(examSlug: string, scraper: any) {
+  try {
+    // Get current exam data from database
+    console.log(`🔍 Fetching ${examSlug.toUpperCase()} exam data...`)
+    const { data: currentExam, error: fetchError } = await supabase
+      .from('exams')
+      .select('*')
+      .eq('slug', examSlug)
+      .maybeSingle()
+    
+    if (fetchError || !currentExam) {
+      console.log(`⚠️ ${examSlug.toUpperCase()} exam not found in database, skipping`)
+      return
+    }
+    
+    console.log(`✅ Found ${examSlug.toUpperCase()} exam in database`)
+    
+    // Fetch exam dates
+    console.log(`🔍 Fetching new ${examSlug.toUpperCase()} exam dates...`)
+    const newExamData = await scraper.fetchExamDates()
+    console.log(`✅ New exam data:`, newExamData)
+    
+    // Update exam schedules
+    const { error: updateError } = await supabase
+      .from('exam_schedules')
+      .upsert({
+        exam_id: currentExam.id,
+        year: newExamData.examYear || new Date().getFullYear(),
+        registration_start: newExamData.registrationStartDate,
+        registration_end: newExamData.registrationEndDate,
+        exam_date_start: newExamData.examDate,
+        result_date: newExamData.resultDate
+      })
+    
+    if (updateError) {
+      console.error(`❌ Error updating ${examSlug.toUpperCase()} exam schedules:`, updateError)
+    } else {
+      console.log(`✅ ${examSlug.toUpperCase()} exam schedules updated successfully`)
+    }
+    
+    // Fetch and update subject weightage
+    console.log(`🔍 Fetching ${examSlug.toUpperCase()} subject weightage...`)
+    let subjectWeightage: any[] = []
+    try {
+      subjectWeightage = await scraper.fetchSubjectWeightage()
+    } catch (err) {
+      console.error(`❌ Subject weightage fetch failed:`, err)
+      subjectWeightage = []
+    }
+    
+    if (!Array.isArray(subjectWeightage)) {
+      console.warn('⚠️ Subject weightage returned non-array, coercing to empty array')
+      subjectWeightage = []
+    }
+    
+    console.log(`✅ Subject weightage fetched:`, subjectWeightage.length, 'records')
+    
+    if (subjectWeightage.length > 0) {
+      console.log(`📊 Updating ${examSlug.toUpperCase()} syllabus table...`)
+      
+      await supabase
+        .from('exam_syllabus')
+        .delete()
+        .eq('exam_id', currentExam.id)
+      
+      const { error: syllabusError } = await supabase
+        .from('exam_syllabus')
+        .insert(
+          subjectWeightage.map((w: any) => ({
+            exam_id: currentExam.id,
+            subject: w.subject,
+            topic: w.topic,
+            weightage: w.weightage
+          }))
+        )
+      
+      if (syllabusError) {
+        console.error(`❌ Error updating syllabus:`, syllabusError)
+      } else {
+        console.log(`✅ Subject weightage updated successfully`)
+      }
+    }
+    
+    // Fetch and update cutoffs
+    console.log(`🔍 Fetching ${examSlug.toUpperCase()} cutoffs...`)
+    let cutoffs: any[] = []
+    try {
+      cutoffs = await scraper.fetchCutoffs()
+    } catch (err) {
+      console.error(`❌ Cutoffs fetch failed:`, err)
+      cutoffs = []
+    }
+    
+    if (!Array.isArray(cutoffs)) {
+      console.warn('⚠️ Cutoffs returned non-array, coercing to empty array')
+      cutoffs = []
+    }
+    
+    console.log(`✅ Cutoffs fetched:`, cutoffs.length, 'records')
+    
+    if (cutoffs.length > 0) {
+      console.log(`📊 Updating ${examSlug.toUpperCase()} cutoffs table...`)
+      
+      await supabase
+        .from('exam_national_cutoffs')
+        .delete()
+        .eq('exam_id', currentExam.id)
+      
+      const { error: cutoffError } = await supabase
+        .from('exam_national_cutoffs')
+        .insert(
+          cutoffs.map((c: any) => ({
+            exam_id: currentExam.id,
+            year: c.year,
+            category: c.category,
+            paper_or_branch: c.paper || c.branch || c.topic || 'General',
+            cutoff_score: c.cutoffScore || c.cutoffMarks || c.percentile || 0,
+            cutoff_rank: c.rankRange ? parseInt(c.rankRange.split('-')[0]) : null
+          }))
+        )
+      
+      if (cutoffError) {
+        console.error(`❌ Error updating cutoffs:`, cutoffError)
+      } else {
+        console.log(`✅ Cutoffs updated successfully`)
+      }
+    }
+    
+    console.log(`✅ ${examSlug.toUpperCase()} automation completed successfully`)
+    
+  } catch (error) {
+    console.error(`❌ ${examSlug.toUpperCase()} automation failed:`, error)
+    // Continue with other exams
+  }
+}
 
 async function runAutomation() {
   console.log('🚀 Starting Weekly Data Automation...')
@@ -361,6 +503,36 @@ async function runAutomation() {
       
       console.log('✅ NIRF rankings updated successfully')
     }
+    
+    // ========================================
+    // JEE MAIN AUTOMATION
+    // ========================================
+    console.log('\n📐 === JEE MAIN AUTOMATION ===')
+    await runExamAutomation('jee-main', new JeeMainScraper())
+    
+    // ========================================
+    // JEE ADVANCED AUTOMATION
+    // ========================================
+    console.log('\n📐 === JEE ADVANCED AUTOMATION ===')
+    await runExamAutomation('jee-advanced', new JeeAdvancedScraper())
+    
+    // ========================================
+    // CAT AUTOMATION
+    // ========================================
+    console.log('\n📊 === CAT AUTOMATION ===')
+    await runExamAutomation('cat', new CatScraper())
+    
+    // ========================================
+    // UPSC/CSE AUTOMATION
+    // ========================================
+    console.log('\n🏛️ === UPSC/CSE AUTOMATION ===')
+    await runExamAutomation('upsc-cse', new UpscScraper())
+    
+    // ========================================
+    // NEET AUTOMATION
+    // ========================================
+    console.log('\n🏥 === NEET AUTOMATION ===')
+    await runExamAutomation('neet', new NeetScraper())
     
     console.log('\n🎉 === AUTOMATION COMPLETED SUCCESSFULLY ===')
     console.log('📊 Summary:')
