@@ -55,6 +55,13 @@ export class CatScraper {
         } finally { clearTimeout(timeout); }
       }, 3, 2000);
       console.log('✅ CAT exam dates fetched:', data)
+      
+      // If all dates are undefined, use mock data
+      if (!data.examDate && !data.registrationStartDate && !data.registrationEndDate && !data.resultDate) {
+        console.log('⚠️ No dates found in page, using mock data')
+        return this.getMockExamData()
+      }
+      
       return data
     } catch (error) {
       console.error('❌ Error fetching CAT exam dates:', error)

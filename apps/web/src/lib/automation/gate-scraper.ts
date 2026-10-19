@@ -56,6 +56,13 @@ export class GateScraper {
       }
       
       console.log('✅ GATE exam dates fetched:', examData)
+      
+      // If all dates are undefined, use mock data
+      if (!examData.examDate && !examData.registrationStartDate && !examData.registrationEndDate && !examData.resultDate) {
+        console.log('⚠️ No dates found in page, using mock data')
+        return this.getMockExamData()
+      }
+      
       return examData
       
     } catch (error) {

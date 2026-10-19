@@ -5,6 +5,9 @@
  * Scrapes GATE, JEE Main, JEE Advanced, CAT, UPSC, NEET, JOSAA, and NIRF data weekly
  */
 
+import { config } from 'dotenv'
+config({ path: '.env.local' })
+
 import { createClient } from '@supabase/supabase-js'
 import { GateScraper } from '../src/lib/automation/gate-scraper'
 import { JosaaScraper } from '../src/lib/automation/josaa-scraper'
@@ -16,7 +19,7 @@ import { UpscScraper } from '../src/lib/automation/upsc-scraper'
 import { NeetScraper } from '../src/lib/automation/neet-scraper'
 
 // Load environment variables
-const supabaseUrl = process.env.CAREER_GUIDANCE_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
 if (!supabaseUrl || !supabaseKey) {
@@ -532,7 +535,7 @@ async function runAutomation() {
     // NEET AUTOMATION
     // ========================================
     console.log('\n🏥 === NEET AUTOMATION ===')
-    await runExamAutomation('neet', new NeetScraper())
+    await runExamAutomation('neet-ug', new NeetScraper())
     
     console.log('\n🎉 === AUTOMATION COMPLETED SUCCESSFULLY ===')
     console.log('📊 Summary:')

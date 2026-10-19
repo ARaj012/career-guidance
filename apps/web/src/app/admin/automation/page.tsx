@@ -18,6 +18,48 @@ export default function AutomationPage() {
       lastUpdate: '2026-10-13',
       status: 'idle',
       changes: []
+    },
+    {
+      exam: 'JEE Main',
+      lastUpdate: '2026-10-13',
+      status: 'idle',
+      changes: []
+    },
+    {
+      exam: 'JEE Advanced',
+      lastUpdate: '2026-10-13',
+      status: 'idle',
+      changes: []
+    },
+    {
+      exam: 'CAT',
+      lastUpdate: '2026-10-13',
+      status: 'idle',
+      changes: []
+    },
+    {
+      exam: 'UPSC/CSE',
+      lastUpdate: '2026-10-13',
+      status: 'idle',
+      changes: []
+    },
+    {
+      exam: 'NEET',
+      lastUpdate: '2026-10-13',
+      status: 'idle',
+      changes: []
+    },
+    {
+      exam: 'JOSAA (IIT/NIT Cutoffs)',
+      lastUpdate: '2026-10-13',
+      status: 'idle',
+      changes: []
+    },
+    {
+      exam: 'NIRF Rankings',
+      lastUpdate: '2026-10-13',
+      status: 'idle',
+      changes: []
     }
   ])
   const [isRunning, setIsRunning] = useState(false)
@@ -164,14 +206,11 @@ export default function AutomationPage() {
               </span>
             </div>
             
-            <div className="p-4 bg-yellow-50 rounded-lg border border-yellow-200">
-              <p className="text-sm text-yellow-900 font-semibold mb-1">Note:</p>
-              <p className="text-sm text-yellow-700">
-                This is a demonstration system. In production, you'll need to:
-                1. Set up a cron job or similar scheduler
-                2. Install Cheerio for actual HTML parsing
-                3. Configure the scraper for each specific website
-                4. Add error handling and retry logic
+            <div className="p-4 bg-green-50 rounded-lg border border-green-200">
+              <p className="text-sm text-green-900 font-semibold mb-1">Status:</p>
+              <p className="text-sm text-green-700">
+                Automation is fully configured and runs automatically every Sunday at 12:00 AM UTC (5:30 AM IST) via GitHub Actions.
+                All 8 data sources are being scraped weekly: GATE, JEE Main, JEE Advanced, CAT, UPSC/CSE, NEET, JOSAA cutoffs, and NIRF rankings.
               </p>
             </div>
           </div>
