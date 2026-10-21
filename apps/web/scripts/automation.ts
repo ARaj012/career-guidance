@@ -87,17 +87,60 @@ async function runExamAutomation(examSlug: string, scraper: any) {
     const newExamData = await scraper.fetchExamDates()
     console.log(`✅ New exam data:`, newExamData)
     
-    // Update exam schedules
-    const { error: updateError } = await supabase
-      .from('exam_schedules')
-      .upsert({
-        exam_id: currentExam.id,
-        year: newExamData.examYear || new Date().getFullYear(),
-        registration_start: newExamData.registrationStartDate,
-        registration_end: newExamData.registrationEndDate,
-        exam_date_start: newExamData.examDate,
-        result_date: newExamData.resultDate
-      })
+    // Check if exam has multiple sessions
+    const sessions = (newExamData as any).sessions || [newExamData]
+    
+    console.log(`📊 Processing ${sessions.length} session(s) for ${examSlug.toUpperCase()}`)
+    
+    for (const sessionData of sessions) {
+      const sessionName = sessionData.session || 'Default'
+      console.log(`  📅 Processing ${sessionName}...`)
+      
+      // Update exam schedules
+      // First check if a schedule exists for this year and session
+      const { data: existingSchedule } = await supabase
+        .from('exam_schedules')
+        .select('id')
+        .eq('exam_id', currentExam.id)
+        .eq('year', sessionData.examYear || new Date().getFullYear())
+        .eq('session', sessionName)
+        .maybeSingle()
+      
+      let updateError
+      if (existingSchedule) {
+        // Update existing record
+        const { error } = await supabase
+          .from('exam_schedules')
+          .update({
+            registration_start: sessionData.registrationStartDate,
+            registration_end: sessionData.registrationEndDate,
+            exam_date_start: sessionData.examDate,
+            result_date: sessionData.resultDate
+          })
+          .eq('id', existingSchedule.id)
+        updateError = error
+      } else {
+        // Insert new record
+        const { error } = await supabase
+          .from('exam_schedules')
+          .insert({
+            exam_id: currentExam.id,
+            year: sessionData.examYear || new Date().getFullYear(),
+            session: sessionName,
+            registration_start: sessionData.registrationStartDate,
+            registration_end: sessionData.registrationEndDate,
+            exam_date_start: sessionData.examDate,
+            result_date: sessionData.resultDate
+          })
+        updateError = error
+      }
+      
+      if (updateError) {
+        console.error(`❌ Error updating ${sessionName} exam schedules:`, updateError)
+      } else {
+        console.log(`✅ ${sessionName} exam schedules updated successfully`)
+      }
+    }
     
     if (updateError) {
       console.error(`❌ Error updating ${examSlug.toUpperCase()} exam schedules:`, updateError)

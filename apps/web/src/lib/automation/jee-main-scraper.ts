@@ -12,6 +12,8 @@ interface JeeMainExamData {
   registrationEndDate?: string
   resultDate?: string
   examYear?: number
+  session?: string
+  sessions?: JeeMainExamData[] // For multi-session exams
 }
 
 interface JeeMainCutoffData {
@@ -308,7 +310,26 @@ export class JeeMainScraper {
       registrationStartDate: `${year}-01-15`,
       registrationEndDate: `${year}-02-15`,
       resultDate: `${year}-06-25`,
-      examYear: year
+      examYear: year,
+      session: 'Session 1',
+      sessions: [
+        {
+          examDate: `${year}-01-24`,
+          registrationStartDate: `${year}-11-01`,
+          registrationEndDate: `${year}-12-15`,
+          resultDate: `${year}-02-15`,
+          examYear: year,
+          session: 'Session 1'
+        },
+        {
+          examDate: `${year}-04-04`,
+          registrationStartDate: `${year}-02-01`,
+          registrationEndDate: `${year}-03-15`,
+          resultDate: `${year}-06-25`,
+          examYear: year,
+          session: 'Session 2'
+        }
+      ]
     }
   }
   
