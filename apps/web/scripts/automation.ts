@@ -142,11 +142,7 @@ async function runExamAutomation(examSlug: string, scraper: any) {
       }
     }
     
-    if (updateError) {
-      console.error(`❌ Error updating ${examSlug.toUpperCase()} exam schedules:`, updateError)
-    } else {
-      console.log(`✅ ${examSlug.toUpperCase()} exam schedules updated successfully`)
-    }
+    console.log(`✅ ${examSlug.toUpperCase()} exam schedules updated successfully`)
     
     // Fetch and update subject weightage
     console.log(`🔍 Fetching ${examSlug.toUpperCase()} subject weightage...`)
